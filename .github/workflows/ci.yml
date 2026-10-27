@@ -14,6 +14,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - name: Runs from the repo without installing
+        run: |
+          python -m cantrip --version
+          python -m cantrip cast attendees-to-leads --csv examples/luma-guests.csv \
+            --profile examples/profiles/devtool-startup.toml --out /tmp/no-install.csv
+          test -s /tmp/no-install.csv
       - run: pip install -e ".[dev]"
       - run: pytest -q
       - name: Installed copy works outside the repo

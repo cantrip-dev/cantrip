@@ -15,19 +15,21 @@ Each workflow is a **spell**: a small, product-neutral folder with its scoring r
 
 ## Quick start
 
-Cantrip needs Python 3.11 or newer. Check with `python3 --version`. On a Mac, the built-in `python3` is 3.9, so install a newer one first (`brew install python@3.12`) and make the environment with it:
+Cantrip needs Python 3.11 or newer and nothing else: no packages, no install step. Check with `python3 --version`. On a Mac, the built-in `python3` is 3.9, so install a newer one first (`brew install python@3.12`) and use `python3.12` below.
 
 ```bash
 git clone https://github.com/cantrip-dev/cantrip.git && cd cantrip
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e .
 
+# Open the app in your browser
+python3 -m cantrip ui
+
+# Or use the command line
 # 1. Tell Cantrip what you sell and who buys it (a few questions, saved to cantrip.toml)
-cantrip init
+python3 -m cantrip init
 
 # 2. Cast a spell on people who showed interest
-cantrip cast attendees-to-leads --csv guests.csv --event "AI Builders Day" --out leads.csv
-cantrip cast github-to-leads --search '"developer advocate" in:bio followers:>100' --limit 50 --out leads.csv
+python3 -m cantrip cast attendees-to-leads --csv guests.csv --event "AI Builders Day" --out leads.csv
+python3 -m cantrip cast github-to-leads --search '"developer advocate" in:bio followers:>100' --limit 50 --out leads.csv
 ```
 
 ```
@@ -39,6 +41,8 @@ Top leads:
    70  Grace Sample, Co-founder & CTO at Sample AI
 Nothing was sent. Review the drafts, then send the ones you like yourself.
 ```
+
+Want a plain `cantrip` command that works from any folder? Install it once with `pipx install git+https://github.com/cantrip-dev/cantrip.git` (or `pip install -e .` inside the repo). The rest of this page writes `cantrip`; without installing, type `python3 -m cantrip` from the repo folder instead.
 
 Each row of `leads.csv` has the person, a score from 0 to 100, a tier (hot, warm or cold), **the reasons for the score**, and a drafted note.
 
@@ -68,7 +72,7 @@ This opens Cantrip in your browser. Fill in your profile, drop in an attendee CS
 
 ## What it needs
 
-- **Python 3.11 or newer.** Nothing else: no packages to install, no database, no account.
+- **Python 3.11 or newer.** Nothing else: no packages, no install step, no database, no account.
 - **Files in, files out.** People come in as a CSV or from GitHub's public API; leads go out as a CSV, and to your CRM if you like. Your profile is one small text file (`cantrip.toml`).
 - **Internet** only for the GitHub spell, which reads public GitHub profiles. A GitHub token is optional (5,000 lookups an hour instead of 60), except for stargazers, where GitHub requires one.
 - **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and TinyFish, Exa, Tavily, Brave, Serper, SerpAPI or SearXNG, which is free and runs on your own computer ([one command with Docker](searxng/)). `cantrip search "a test query"` checks your search service works. Exa and Tavily support is in beta: not yet tried against the live services. See [web-to-leads](spellbook/web-to-leads/SPELL.md).
