@@ -22,11 +22,13 @@ def ui(tmp_path):
     server.shutdown()
 
 
-def call(url, body=None, host=None):
+def call(url, body=None, host=None, origin=None):
     req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Content-Type": "application/json"})
     if host:
         req.add_header("Host", host)
+    if origin:
+        req.add_header("Origin", origin)
     try:
         with urllib.request.urlopen(req) as resp:
             return resp.status, resp.read()
@@ -61,3 +63,9 @@ def test_profile_needs_essentials(ui):
 
 def test_other_hosts_are_refused(ui):
     assert call(ui + "/api/state", host="evil.example")[0] == 403
+
+
+def test_other_websites_are_refused(ui):
+    body = {"name": "X", "pitch": "y", "buyer_roles": "cto"}
+    assert call(ui + "/api/profile", body, origin="https://evil.example")[0] == 403
+    assert call(ui + "/api/profile", body, origin=ui)[0] == 200

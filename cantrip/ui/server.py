@@ -13,6 +13,7 @@ import os
 import threading
 import tomllib
 import urllib.error
+import urllib.parse
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -89,6 +90,9 @@ class Handler(BaseHTTPRequestHandler):
     def _send(self, status: int, body: bytes, kind: str) -> None:
         self.send_response(status)
         self.send_header("Content-Type", kind)
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
@@ -100,7 +104,13 @@ class Handler(BaseHTTPRequestHandler):
     def _trusted(self) -> bool:
         # Only answer pages served from this computer (guards against DNS rebinding).
         host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
-        return host in ALLOWED_HOSTS
+        if host not in ALLOWED_HOSTS:
+            return False
+        # And refuse requests another website makes from the user's browser.
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        return urllib.parse.urlsplit(origin).hostname in ALLOWED_HOSTS
 
     def do_GET(self) -> None:
         if not self._trusted():

@@ -123,3 +123,12 @@ def test_plain_cantrip_opens_the_app(monkeypatch):
     monkeypatch.setattr(server, "serve", lambda **kw: seen.update(kw))
     assert main([]) == 0
     assert seen["port"] == 8765 and seen["open_browser"] is True
+
+
+def test_csv_cells_cannot_run_as_formulas(tmp_path):
+    from cantrip.sinks import csv_file as csv_out
+
+    out = tmp_path / "leads.csv"
+    csv_out.write([Lead(name="=HYPERLINK(\"https://evil.example\")", company="@SUM(A1)", title="CTO")], out)
+    row = next(csv_file.people(out))
+    assert row.name.startswith("'=") and row.company.startswith("'@") and row.title == "CTO"

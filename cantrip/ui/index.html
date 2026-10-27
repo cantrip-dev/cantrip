@@ -425,7 +425,7 @@ function renderRows() {
   $("rows").innerHTML = shown.map((l, i) => {
     const links = [
       l.email && `<a href="mailto:${esc(l.email)}">email</a>`,
-      l.linkedin && `<a href="${esc(l.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`,
+      l.linkedin && /^https?:\/\//.test(l.linkedin) && `<a href="${esc(l.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`,
       l.github && `<a href="https://github.com/${esc(l.github)}" target="_blank" rel="noopener">GitHub</a>`,
       l.website && /^https?:\/\//.test(l.website) && `<a href="${esc(l.website)}" target="_blank" rel="noopener">site</a>`,
       l.source_url && /^https?:\/\//.test(l.source_url) && `<a href="${esc(l.source_url)}" target="_blank" rel="noopener">source</a>`,
@@ -450,7 +450,9 @@ $("filter").oninput = renderRows;
 $("download").onclick = () => {
   if (!leads.length) return;
   const cols = Object.keys(leads[0]);
-  const cell = (v) => /[",\n]/.test(v) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  // A cell starting with = + - @ would run as a formula in a spreadsheet, so it gets a leading '.
+  const safe = (v) => /^[=+\-@\t\r]/.test(String(v)) ? "'" + v : String(v);
+  const cell = (v) => { v = safe(v); return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
   const csv = [cols.join(","), ...leads.map((l) => cols.map((c) => cell(l[c] ?? "")).join(","))].join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
