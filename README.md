@@ -71,7 +71,7 @@ This opens Cantrip in your browser. Fill in your profile, drop in an attendee CS
 - **Python 3.11 or newer.** Nothing else: no packages to install, no database, no account.
 - **Files in, files out.** People come in as a CSV or from GitHub's public API; leads go out as a CSV, and to your CRM if you like. Your profile is one small text file (`cantrip.toml`).
 - **Internet** only for the GitHub spell, which reads public GitHub profiles. A GitHub token is optional (5,000 lookups an hour instead of 60), except for stargazers, where GitHub requires one.
-- **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and TinyFish, Exa, Tavily, Brave, Serper, SerpAPI or SearXNG, which is free and runs on your own computer ([one command with Docker](searxng/)). `cantrip search "a test query"` checks your search service works. See [web-to-leads](spellbook/web-to-leads/SPELL.md).
+- **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and TinyFish, Exa, Tavily, Brave, Serper, SerpAPI or SearXNG, which is free and runs on your own computer ([one command with Docker](searxng/)). `cantrip search "a test query"` checks your search service works. Exa and Tavily support is in beta: not yet tried against the live services. See [web-to-leads](spellbook/web-to-leads/SPELL.md).
 
 ## Your product, your ICP
 
@@ -119,6 +119,8 @@ It adds people who aren't there yet and leaves everyone already there alone (mat
 | `twenty` | open source, self-host free (or Twenty's cloud) | `CANTRIP_TWENTY_KEY`: Settings > Developers > API key. `CANTRIP_TWENTY_URL`: your Twenty's address if self-hosted. Leads become people linked to their company, with a note. |
 | `espocrm` | open source, self-host free | `CANTRIP_ESPO_KEY`: an API user's key (Administration > API Users). `CANTRIP_ESPO_URL`: your EspoCRM's address. Leads become Leads with status New. |
 
+> **Beta.** The CRM outputs are tested against simulated API answers, not yet against live Notion, HubSpot, Twenty or EspoCRM accounts. Try one on a test database first, and [open an issue](https://github.com/cantrip-dev/cantrip/issues) if something breaks.
+
 Want a self-hosted CRM in one command? Twenty and EspoCRM both ship a Docker setup: see their own install guides.
 
 ## Quality over quantity
@@ -144,6 +146,10 @@ Every spell has a `SPELL.md`, the same workflow written as steps an agent can fo
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). We use DCO sign-off (`git commit -s`).
+
+## Security
+
+Cantrip runs on your computer with your own keys. To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## License
 

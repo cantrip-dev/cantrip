@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cantrip"
+name = "cantrip-gtm"
 version = "0.1.0"
 description = "Go-to-market, cast at will: tell it what you sell and who buys it, and open-source spells turn event attendees and GitHub profiles into sorted leads and drafted outreach."
 readme = "README.md"

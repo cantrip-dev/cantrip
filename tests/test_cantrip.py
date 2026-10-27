@@ -64,7 +64,7 @@ def test_csv_reads_luma_export_with_custom_questions():
     leads = list(csv_file.people(GUESTS))
     ada = leads[0]
     assert (ada.name, ada.company, ada.title) == ("Ada Example", "Example Labs", "Head of Developer Relations")
-    assert ada.linkedin.endswith("/ada-example")
+    assert ada.linkedin.endswith("/ada_example")
     assert ada.signal == "attended" and leads[1].signal == "registered"
 
 
