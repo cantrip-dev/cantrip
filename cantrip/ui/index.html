@@ -173,9 +173,18 @@
         <div><label>API address <span class="hint">(optional, e.g. http://localhost:11434/v1 for Ollama)</span></label><input type="text" id="ai-base-url"></div>
         <div><label>Model <span class="hint">(optional)</span></label><input type="text" id="ai-model" placeholder="gpt-4o-mini or claude-haiku-4-5"></div>
         <div><label>Search service</label><select id="search-provider">
-          <option value="">from this computer's settings</option><option value="tavily">Tavily</option><option value="brave">Brave Search</option>
-          <option value="serpapi">SerpAPI</option><option value="searxng">SearXNG (free, self-hosted)</option></select></div>
+          <option value="">from this computer's settings</option>
+          <option value="tinyfish">TinyFish (free, also reads script-heavy pages)</option>
+          <option value="exa">Exa (people and company search)</option>
+          <option value="tavily">Tavily</option><option value="brave">Brave Search</option>
+          <option value="serper">Serper</option><option value="serpapi">SerpAPI</option>
+          <option value="searxng">SearXNG (free, self-hosted)</option></select></div>
         <div><label>Search key <span class="hint">(or your SearXNG address)</span></label><input type="password" id="search-key" autocomplete="off"></div>
+        <div id="exa-row" class="hidden"><label>Exa index</label><select id="search-category">
+          <option value="">the whole web</option><option value="people">people (profiles)</option>
+          <option value="company">companies</option><option value="news">news</option></select></div>
+        <div><label>TinyFish key for reading pages <span class="hint">(optional, free; helps with any search service)</span></label>
+          <input type="password" id="reader-key" autocomplete="off"></div>
       </div>
     </details>
 
@@ -197,6 +206,18 @@
       <input type="text" id="filter" placeholder="Filter by name, company or title" style="max-width:320px">
       <button id="download">Download CSV</button>
     </div>
+    <details id="crm-box">
+      <summary>Add these leads to your CRM <span class="hint">(people already there are left alone; nothing is sent to anyone)</span></summary>
+      <div class="grid">
+        <div><label>Where</label><select id="crm">
+          <option value="notion">Notion database</option><option value="hubspot">HubSpot (free plan works)</option>
+          <option value="twenty">Twenty (open source)</option><option value="espocrm">EspoCRM (open source)</option></select></div>
+        <div><label>Which leads</label><select id="crm-tier"><option value="hot">hot only</option>
+          <option value="warm" selected>hot and warm</option><option value="cold">everyone</option></select></div>
+        <div id="crm-fields" class="wide"></div>
+      </div>
+      <div class="row actions"><button id="crm-go">Add to CRM</button><span class="msg" id="crm-msg"></span></div>
+    </details>
     <table>
       <thead><tr><th>Score</th><th>Person</th><th class="hide-sm">Why</th><th class="hide-sm">Reach</th><th></th></tr></thead>
       <tbody id="rows"></tbody>
@@ -331,6 +352,7 @@ $("run").onclick = async () => {
     research: $("research").checked, ai_drafts: $("ai-drafts").checked, top: $("top").value,
     ai_provider: $("ai-provider").value, ai_key: $("ai-key").value, ai_base_url: $("ai-base-url").value, ai_model: $("ai-model").value,
     search_provider: $("search-provider").value, search_key: searxng ? "" : searchKey, search_url: searxng ? searchKey : "",
+    search_category: $("search-provider").value === "exa" ? $("search-category").value : "", reader_key: $("reader-key").value,
   };
   const slow = kind === "web" || body.research || body.ai_drafts;
   $("run").disabled = true; $("run").innerHTML = '<span class="spinner"></span>Casting…';
@@ -397,6 +419,39 @@ $("download").onclick = () => {
   a.download = `${currentSpell}-leads.csv`; a.click();
 };
 
+// ---- CRM ----
+const CRM_FIELDS = {
+  notion: [["CANTRIP_NOTION_TOKEN", "Integration secret", "password", "notion.so/profile/integrations; then add it to the database under ... > Connections"],
+           ["CANTRIP_NOTION_DATABASE", "Database link", "text", "copy the link to your Notion database"]],
+  hubspot: [["CANTRIP_HUBSPOT_TOKEN", "Private app token", "password", "needs the contacts read and write scopes"]],
+  twenty: [["CANTRIP_TWENTY_KEY", "API key", "password", "Settings > Developers in Twenty"],
+           ["CANTRIP_TWENTY_URL", "Address", "text", "only if self-hosted; empty means Twenty's cloud"]],
+  espocrm: [["CANTRIP_ESPO_KEY", "API user key", "password", "Administration > API Users"],
+            ["CANTRIP_ESPO_URL", "Address", "text", "e.g. https://crm.example.com"]],
+};
+function buildCrm() {
+  const name = $("crm").value, set = state.crms?.[name]?.set;
+  $("crm-fields").innerHTML = CRM_FIELDS[name].map(([key, label, type, hint]) =>
+    `<label>${label} <span class="hint">(${set ? "set on this computer; leave empty to use it" : esc(hint)})</span></label>
+     <input type="${type}" data-key="${key}" autocomplete="off">`).join("");
+}
+$("crm").onchange = buildCrm;
+$("crm-go").onclick = async () => {
+  const settings = {};
+  document.querySelectorAll("#crm-fields input").forEach((el) => { if (el.value.trim()) settings[el.dataset.key] = el.value.trim(); });
+  $("crm-go").disabled = true; $("crm-msg").className = "msg"; $("crm-msg").textContent = "Adding…";
+  try {
+    const data = await api("/api/crm", {crm: $("crm").value, min_tier: $("crm-tier").value, settings});
+    const c = data.counts;
+    leads = data.leads; renderRows();
+    $("crm-msg").className = "msg ok";
+    $("crm-msg").textContent = `${data.label}: ${c.added} added, ${c["already there"]} already there` +
+      (c.failed ? `, ${c.failed} failed` : "") + (c.skipped ? `, ${c.skipped} skipped (no person named)` : "") + ".";
+  } catch (err) { $("crm-msg").className = "msg err"; $("crm-msg").textContent = err.message; }
+  finally { $("crm-go").disabled = false; }
+};
+$("search-provider").onchange = () => $("exa-row").classList.toggle("hidden", $("search-provider").value !== "exa");
+
 // ---- start ----
 (async () => {
   state = await api("/api/state");
@@ -405,7 +460,7 @@ $("download").onclick = () => {
   if (state.has_token) $("token-hint").textContent = "(already set on this computer; leave empty to use it)";
   $("ai-status").textContent = state.has_ai && state.has_search ? "(set on this computer)"
     : state.has_ai ? "(AI set on this computer; search not set)" : state.has_search ? "(search set; AI not set)" : "(not set yet)";
-  showProfile(); buildSpells(); buildGhInput();
+  showProfile(); buildSpells(); buildGhInput(); buildCrm();
 })();
 </script>
 </body>

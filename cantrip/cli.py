@@ -8,6 +8,7 @@
     cantrip cast github-to-leads --contributors owner/repo
     cantrip cast web-to-leads --web "AI startups hiring their first DevRel"   # needs an AI model and a search key
     cantrip cast attendees-to-leads --csv guests.csv --research               # research the best leads on the web
+    cantrip cast attendees-to-leads --csv guests.csv --to notion              # also add them to Notion (or hubspot, twenty, espocrm)
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from cantrip.ai import AI, AIError
 from cantrip.web import Search, SearchError
 from cantrip.lead import Lead
 from cantrip.report import summary
+from cantrip import sinks
 from cantrip.sinks import csv_file as csv_sink
 from cantrip.sources import csv_file, github
 from cantrip.sources import web as web_source
@@ -52,8 +54,8 @@ def _check_ai(ai: AI, search: Search | None) -> str:
         return ("This needs an AI model. Set CANTRIP_AI_KEY (and CANTRIP_AI_BASE_URL / CANTRIP_AI_MODEL for a\n"
                 "provider other than OpenAI, or point CANTRIP_AI_BASE_URL at a local Ollama).")
     if search is not None and not search.ready:
-        return ("This needs a search service. Set CANTRIP_SEARCH (tavily, brave, serpapi or searxng) and\n"
-                "CANTRIP_SEARCH_KEY, or CANTRIP_SEARCH_URL for your own SearXNG.")
+        return ("This needs a search service. Set CANTRIP_SEARCH (tinyfish, exa, tavily, brave, serper, serpapi or\n"
+                "searxng) and CANTRIP_SEARCH_KEY, or CANTRIP_SEARCH_URL for your own SearXNG.")
     return ""
 
 
@@ -70,6 +72,13 @@ def cast(args: argparse.Namespace) -> int:
         config["event_name"] = args.event
     ai_drafts = (config.get("ai_drafts", False) or args.ai_drafts) and not args.no_ai_drafts
     uses_web = args.web is not None or args.research
+    crm = None
+    if args.to:
+        try:
+            crm = sinks.connect(args.to)
+        except sinks.CRMError as err:
+            print(err, file=sys.stderr)
+            return 2
     ai = AI.from_env() if (uses_web or ai_drafts) else None
     search = Search.from_env() if uses_web else None
     if ai is not None:
@@ -108,9 +117,20 @@ def cast(args: argparse.Namespace) -> int:
         print(err, file=sys.stderr)
         return 1
 
+    crm_line = ""
+    if crm is not None:
+        try:
+            counts = sinks.push(crm, results, min_tier=args.crm_tier, progress=_progress)
+            crm_line = (f"{crm.label}: {counts['added']} added, {counts['already there']} already there"
+                        + (f", {counts['failed']} failed (see the crm column)" if counts["failed"] else "")
+                        + (f", {counts['skipped']} skipped (no person named)" if counts["skipped"] else "") + ".")
+        except sinks.CRMError as err:
+            crm_line = f"Couldn't add leads to {crm.label}: {err}"
     count = csv_sink.write(results, args.out)
     print(f"{count} leads -> {args.out}, best first")
     print(summary(results))
+    if crm_line:
+        print(crm_line)
     if ai is not None:
         print(f"Used {ai.calls} AI calls" + (f" ({ai.tokens:,} tokens)" if ai.tokens else "")
               + (f" and {search.searches} searches" if search else "")
@@ -199,6 +219,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--limit", type=int, default=50, help="max people to read from GitHub (default 50)")
     p.add_argument("--no-enrich", action="store_true", help="skip GitHub profile lookups")
     p.add_argument("--min-tier", default="cold", choices=["hot", "warm", "cold"], help="drop leads below this tier")
+    p.add_argument("--to", choices=list(sinks.CRMS), help="also add the leads to a CRM: notion, hubspot, twenty or "
+                   "espocrm (settings in the README); people already there are left alone")
+    p.add_argument("--crm-tier", default="warm", choices=["hot", "warm", "cold"],
+                   help="with --to: add leads at this tier or better (default warm)")
     p.add_argument("--out", default="leads.csv", help="where to write the results (default leads.csv)")
     p.set_defaults(func=cast)
 

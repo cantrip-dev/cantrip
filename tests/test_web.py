@@ -106,3 +106,27 @@ def test_blocked_and_video_sites_are_skipped():
     assert web_source._skip("https://old.reddit.com/r/x", [])
     assert web_source._skip("https://example.com/a", ["example.com"])
     assert not web_source._skip("https://devconf.example/speakers", [])
+
+
+def test_exa_and_tinyfish_requests(monkeypatch):
+    from cantrip import web
+    seen = []
+
+    def fake(url, data=None, headers=None, timeout=30):
+        seen.append((url, data, headers))
+        if "exa.ai" in url:
+            return json.dumps({"results": [{"url": "https://a.dev", "title": "A", "text": "x" * 600}]}).encode()
+        if "fetch.tinyfish" in url:
+            return json.dumps({"results": [{"text": "page text from tinyfish"}]}).encode()
+        return json.dumps({"results": [{"url": "https://b.dev", "title": "B", "snippet": "s"}]}).encode()
+    monkeypatch.setattr(web, "_request", fake)
+
+    exa = web.Search(provider="exa", key="k", category="people")
+    found = exa.search("devrel leads", 3)
+    assert found[0].url == "https://a.dev" and seen[0][1]["category"] == "people"
+    assert exa.read(found[0]).startswith("x") and exa.pages == 0  # Exa returned the page text
+
+    tf = web.Search(provider="tinyfish", key="k", reader_key="k")
+    hit = tf.search("devrel", 3)[0]
+    assert "query=devrel" in seen[1][0] and seen[1][2]["X-API-Key"] == "k"
+    assert tf.read(hit) == "page text from tinyfish"

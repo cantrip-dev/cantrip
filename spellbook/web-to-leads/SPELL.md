@@ -13,9 +13,24 @@ An AI model and a search service. Each user brings their own; keys are read from
 | `CANTRIP_AI_KEY` | your key. Not needed for a local Ollama |
 | `CANTRIP_AI_BASE_URL` | optional: `https://openrouter.ai/api/v1`, `http://localhost:11434/v1` (Ollama)… |
 | `CANTRIP_AI_MODEL` | optional: defaults to `gpt-4o-mini` or `claude-haiku-4-5` |
-| `CANTRIP_SEARCH` | `tavily` (default), `brave`, `serpapi` or `searxng` |
+| `CANTRIP_SEARCH` | `tinyfish` (default), `exa`, `tavily`, `brave`, `serper`, `serpapi` or `searxng` |
 | `CANTRIP_SEARCH_KEY` | the search service's key |
 | `CANTRIP_SEARCH_URL` | your SearXNG address (free and self-hosted, no key) |
+| `CANTRIP_SEARCH_CATEGORY` | Exa only: `people`, `company` or `news` to search Exa's own indexes |
+| `CANTRIP_TINYFISH_KEY` | optional: read pages through TinyFish, which handles script-heavy sites, whatever search service you use |
+
+Which search service? All have a free way in; check each one's pricing page, as allowances change:
+
+| Service | Free | Good for |
+| --- | --- | --- |
+| SearXNG | free and open source, you host it | no key, no limits, no account |
+| TinyFish | free within rate limits | search plus a page reader that copes with script-heavy sites |
+| Exa | a monthly free credit | people and company search (`CANTRIP_SEARCH_CATEGORY=people`): finds profiles by role |
+| Tavily | a monthly free allowance | returns page text with results, so fewer pages to fetch |
+| Serper, SerpAPI | a free allowance | Google results |
+| Brave | a small monthly credit, card required | an independent index |
+
+With Exa's `people` index, results can be LinkedIn profile pages. Cantrip keeps those (Exa returns their text, so nothing is scraped) and each lead still has to be named on the page it came from.
 
 A run of 8 searches reads about 24 pages and makes about 40 AI calls with drafts (roughly 80-100k tokens): from a few cents to around ten cents with a small model. `--dry-run` shows the planned searches and the estimate without running them.
 

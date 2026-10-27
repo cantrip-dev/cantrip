@@ -37,6 +37,7 @@ class Lead:
     tier: str = ""
     reasons: list[str] = field(default_factory=list)
     draft: str = ""
+    crm: str = ""  # what happened when it was sent to a CRM: "added", "already there", "skipped: ..."
 
     def to_row(self) -> dict[str, str]:
         row = asdict(self)

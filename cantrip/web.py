@@ -1,10 +1,14 @@
 """Web search and page reading, with a choice of search service.
 
-    CANTRIP_SEARCH         tavily | brave | serpapi | searxng   (default: tavily)
-    CANTRIP_SEARCH_KEY     the service's API key (SearXNG needs none)
-    CANTRIP_SEARCH_URL     your SearXNG address, e.g. http://localhost:8888
+    CANTRIP_SEARCH           tinyfish | exa | tavily | brave | serper | serpapi | searxng   (default: tinyfish)
+    CANTRIP_SEARCH_KEY       the service's API key (SearXNG needs none)
+    CANTRIP_SEARCH_URL       your SearXNG address, e.g. http://localhost:8888
+    CANTRIP_SEARCH_CATEGORY  Exa only: people, company or news, to search Exa's people or company index
+    CANTRIP_TINYFISH_KEY     optional: read pages through TinyFish (free, handles script-heavy sites),
+                             whichever search service you use
 
-SearXNG is free and self-hosted; the others have free tiers. Keys are read
+SearXNG is free and self-hosted; TinyFish search and page reading are free
+within rate limits; the others have free monthly allowances. Keys are read
 from the environment only and never written to disk.
 """
 
@@ -19,7 +23,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
-PROVIDERS = ("tavily", "brave", "serpapi", "searxng")
+PROVIDERS = ("tinyfish", "exa", "tavily", "brave", "serper", "serpapi", "searxng")
 UA = "Mozilla/5.0 (compatible; Cantrip/0.1; +https://github.com/cantrip-dev/cantrip)"
 
 
@@ -45,9 +49,11 @@ def _request(url: str, data: dict | None = None, headers: dict | None = None, ti
 
 @dataclass
 class Search:
-    provider: str = "tavily"
+    provider: str = "tinyfish"
     key: str = ""
     url: str = ""
+    category: str = ""  # Exa: people, company or news
+    reader_key: str = ""  # TinyFish key for reading pages
     searches: int = 0
     pages: int = 0
     skipped: int = 0  # pages that couldn't be read (blocked, empty or script-only)
@@ -55,8 +61,12 @@ class Search:
 
     @classmethod
     def from_env(cls) -> "Search":
-        return cls(provider=(os.environ.get("CANTRIP_SEARCH") or "tavily").lower(),
-                   key=os.environ.get("CANTRIP_SEARCH_KEY", ""), url=os.environ.get("CANTRIP_SEARCH_URL", ""))
+        provider = (os.environ.get("CANTRIP_SEARCH") or "tinyfish").lower()
+        tinyfish = os.environ.get("CANTRIP_TINYFISH_KEY", "")
+        key = os.environ.get("CANTRIP_SEARCH_KEY", "") or (tinyfish if provider == "tinyfish" else "")
+        return cls(provider=provider, key=key, url=os.environ.get("CANTRIP_SEARCH_URL", ""),
+                   category=os.environ.get("CANTRIP_SEARCH_CATEGORY", "").lower(),
+                   reader_key=tinyfish or (key if provider == "tinyfish" else ""))
 
     @property
     def ready(self) -> bool:
@@ -71,6 +81,24 @@ class Search:
                               + (": check your search key" if err.code in (401, 403) else "")) from err
         except urllib.error.URLError as err:
             raise SearchError(f"Couldn't reach {self.provider}: {err.reason}") from err
+
+    def _tinyfish(self, query: str, count: int) -> list[Result]:
+        q = urllib.parse.urlencode({"query": query})
+        data = json.loads(_request(f"https://api.search.tinyfish.ai?{q}", headers={"X-API-Key": self.key}))
+        return [Result(r["url"], r.get("title", ""), r.get("snippet", "")) for r in data.get("results", [])]
+
+    def _exa(self, query: str, count: int) -> list[Result]:
+        body = {"query": query, "numResults": count, "type": "auto", "contents": {"text": {"maxCharacters": 12000}}}
+        if self.category:
+            body["category"] = self.category
+        data = json.loads(_request("https://api.exa.ai/search", body, {"x-api-key": self.key}))
+        return [Result(r["url"], r.get("title") or "", (r.get("summary") or ""), r.get("text") or "")
+                for r in data.get("results", [])]
+
+    def _serper(self, query: str, count: int) -> list[Result]:
+        data = json.loads(_request("https://google.serper.dev/search", {"q": query, "num": count},
+                                   {"X-API-KEY": self.key}))
+        return [Result(r["link"], r.get("title", ""), r.get("snippet", "")) for r in data.get("organic", [])]
 
     def _tavily(self, query: str, count: int) -> list[Result]:
         data = json.loads(_request("https://api.tavily.com/search", {
@@ -101,12 +129,27 @@ class Search:
         if len(result.content) > 500:
             return result.content[:max_chars]
         self.pages += 1
+        if self.reader_key:
+            text = self._read_tinyfish(result.url)
+            if text:
+                return text[:max_chars]
         try:
             raw = _request(result.url, timeout=20).decode("utf-8", errors="replace")
         except (urllib.error.URLError, TimeoutError, ValueError) as err:
             self.errors.append(f"couldn't read {result.url}: {err}")
             return (result.title + "\n" + result.snippet)[:max_chars]
         return page_text(raw)[:max_chars]
+
+
+    def _read_tinyfish(self, url: str) -> str:
+        try:
+            data = json.loads(_request("https://api.fetch.tinyfish.ai", {"urls": [url]},
+                                       {"X-API-Key": self.reader_key}, timeout=60))
+        except (urllib.error.URLError, TimeoutError, ValueError) as err:
+            self.errors.append(f"TinyFish couldn't read {url}: {err}")
+            return ""
+        results = data.get("results") or []
+        return (results[0].get("text") or "") if results else ""
 
 
 class _Text(HTMLParser):

@@ -135,7 +135,9 @@ def find(ai: AI, search: Search, config: dict[str, Any], brief: str = "", querie
         for result in search.search(query, count=pages_per_query * 2 + 2):
             if read >= pages_per_query:
                 break
-            if result.url in seen_urls or _skip(result.url, skip):
+            # Exa's people index returns profile pages from its own copy; that's allowed when you ask for it.
+            from_index = result.content and getattr(search, "category", "") == "people"
+            if result.url in seen_urls or (_skip(result.url, skip) and not from_index):
                 continue
             seen_urls.add(result.url)
             text = search.read(result)

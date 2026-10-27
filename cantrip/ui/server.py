@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from cantrip import __version__, engine, profile, spell
+from cantrip import __version__, engine, profile, sinks, spell
 from cantrip.ai import AI, AIError
 from cantrip.web import Search, SearchError
 from cantrip.report import summary
@@ -49,9 +49,11 @@ def _ai(req: dict[str, Any]) -> AI:
 
 def _search(req: dict[str, Any]) -> Search:
     env = Search.from_env()
-    return Search(provider=req.get("search_provider") or env.provider,
-                  key=(req.get("search_key") or "").strip() or env.key,
-                  url=(req.get("search_url") or "").strip() or env.url)
+    provider = req.get("search_provider") or env.provider
+    key = (req.get("search_key") or "").strip() or (env.key if not req.get("search_provider") else "")
+    reader = (req.get("reader_key") or "").strip() or env.reader_key or (key if provider == "tinyfish" else "")
+    return Search(provider=provider, key=key, url=(req.get("search_url") or "").strip() or env.url,
+                  category=(req.get("search_category") or "").strip() or env.category, reader_key=reader)
 
 
 def _leads_for(req: dict[str, Any], config=None, ai=None, search=None):
@@ -79,6 +81,7 @@ def _leads_for(req: dict[str, Any], config=None, ai=None, search=None):
 class Handler(BaseHTTPRequestHandler):
     profile_path: Path = profile.DEFAULT_PATH
     run_lock = threading.Lock()
+    last_results: list = []  # the latest run's leads, for "Add to CRM"
 
     def log_message(self, fmt: str, *args: Any) -> None:  # keep the terminal quiet
         pass
@@ -114,7 +117,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"version": __version__, "profile": mine, "profile_path": str(self.profile_path),
                                "spells": _spells(), "questions": [[k, q, h] for k, q, h in profile.QUESTIONS],
                                "has_token": bool(os.environ.get("GITHUB_TOKEN")),
-                               "has_ai": AI.from_env().ready, "has_search": Search.from_env().ready})
+                               "has_ai": AI.from_env().ready, "has_search": Search.from_env().ready,
+                               "crms": {name: {"label": label, "set": all(os.environ.get(v) for v in needs[:1])}
+                                        for name, (label, needs) in sinks.CRMS.items()}})
         self._send(404, b"Not found", "text/plain")
 
     def do_POST(self) -> None:
@@ -131,6 +136,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._save_profile(req)
         if self.path == "/api/run":
             return self._run(req)
+        if self.path == "/api/crm":
+            return self._crm(req)
         self._send(404, b"Not found", "text/plain")
 
     def _save_profile(self, req: dict[str, Any]) -> None:
@@ -197,7 +204,21 @@ class Handler(BaseHTTPRequestHandler):
                         os.environ["GITHUB_TOKEN"] = saved
         usage = (f"{ai.calls} AI calls" + (f", {search.searches} searches" if search else "")
                  + (f" ({search.skipped} pages couldn't be read)" if search and search.skipped else "")) if ai else ""
+        Handler.last_results = results
         self._json({"leads": [lead.to_row() for lead in results], "summary": summary(results), "usage": usage})
+
+    def _crm(self, req: dict[str, Any]) -> None:
+        if not self.last_results:
+            return self._json({"error": "Cast a spell first, then add its leads."}, 400)
+        settings = {k: str(v).strip() for k, v in (req.get("settings") or {}).items() if k.startswith("CANTRIP_")}
+        with self.run_lock:
+            try:
+                crm = sinks.connect(req.get("crm") or "", settings)
+                counts = sinks.push(crm, self.last_results, min_tier=req.get("min_tier") or "warm",
+                                    progress=lambda _: None)
+            except sinks.CRMError as err:
+                return self._json({"error": str(err)}, 502)
+        self._json({"counts": counts, "label": crm.label, "leads": [lead.to_row() for lead in self.last_results]})
 
 
 def serve(port: int = 8765, profile_path: str | Path | None = None, open_browser: bool = True) -> None:

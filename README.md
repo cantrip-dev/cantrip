@@ -52,7 +52,9 @@ Each row of `leads.csv` has the person, a score from 0 to 100, a tier (hot, warm
 
 Add `--research` to any spell to look up the best leads on the web and write their drafts around what turns up.
 
-Coming next: Discord and Reddit sources, and CRM outputs. Ideas and pull requests are welcome.
+Add `--to notion` (or `hubspot`, `twenty`, `espocrm`) to any spell to put the hot and warm leads in your CRM too. See [Send leads to your CRM](#send-leads-to-your-crm).
+
+Coming next: Discord and Reddit sources. Ideas and pull requests are welcome.
 
 ## Prefer clicking? Use the app
 
@@ -67,9 +69,9 @@ This opens Cantrip in your browser. Fill in your profile, drop in an attendee CS
 ## What it needs
 
 - **Python 3.11 or newer.** Nothing else: no packages to install, no database, no account.
-- **Files in, files out.** People come in as a CSV or from GitHub's public API; leads go out as a CSV. Your profile is one small text file (`cantrip.toml`).
+- **Files in, files out.** People come in as a CSV or from GitHub's public API; leads go out as a CSV, and to your CRM if you like. Your profile is one small text file (`cantrip.toml`).
 - **Internet** only for the GitHub spell, which reads public GitHub profiles. A GitHub token is optional (5,000 lookups an hour instead of 60), except for stargazers, where GitHub requires one.
-- **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and Tavily, Brave, SerpAPI or a self-hosted SearXNG. See [web-to-leads](spellbook/web-to-leads/SPELL.md).
+- **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and TinyFish, Exa, Tavily, Brave, Serper, SerpAPI or a self-hosted SearXNG. See [web-to-leads](spellbook/web-to-leads/SPELL.md).
 
 ## Your product, your ICP
 
@@ -96,6 +98,26 @@ cantrip init --name "Acme Vector" --pitch "a vector database that runs inside Po
 Three ready-made examples live in [`examples/profiles/`](examples/profiles/): a devtool startup, an event selling sponsorships, and a B2B SaaS tool. Try one with `--profile examples/profiles/devtool-startup.toml`.
 
 To change how a spell scores or writes (the seniority ladder, the weights, the note templates), override it under `[weights]` or `[templates]` in your profile, or copy the spell's folder and edit its `spell.toml`.
+
+## Send leads to your CRM
+
+Cantrip always writes a CSV. Add `--to` and it also puts the leads in a CRM, or in the app press **Add to CRM** under your results:
+
+```bash
+cantrip cast attendees-to-leads --csv guests.csv --to notion                 # hot and warm leads
+cantrip cast web-to-leads --web --to twenty --crm-tier hot                   # hot leads only
+```
+
+It adds people who aren't there yet and leaves everyone already there alone (matched by email, LinkedIn, or name and company), so you can run a spell again without duplicates and it never overwrites your notes or status. Each lead carries its score, the reasons, where it was found and the draft, marked not sent. Nothing is emailed to anyone.
+
+| `--to` | Cost | Settings |
+| --- | --- | --- |
+| `notion` | free | `CANTRIP_NOTION_TOKEN`: create an integration at notion.so/profile/integrations and copy its secret. Open your database, press **...** > **Connections** and add the integration. `CANTRIP_NOTION_DATABASE`: the database's link. Cantrip adds the columns it needs (Email, Company, Score, Tier, Status, Why...) and leaves yours alone. |
+| `hubspot` | free plan works | `CANTRIP_HUBSPOT_TOKEN`: a private app token with the contacts read and write scopes. Leads become contacts with a note. |
+| `twenty` | open source, self-host free (or Twenty's cloud) | `CANTRIP_TWENTY_KEY`: Settings > Developers > API key. `CANTRIP_TWENTY_URL`: your Twenty's address if self-hosted. Leads become people linked to their company, with a note. |
+| `espocrm` | open source, self-host free | `CANTRIP_ESPO_KEY`: an API user's key (Administration > API Users). `CANTRIP_ESPO_URL`: your EspoCRM's address. Leads become Leads with status New. |
+
+Want a self-hosted CRM in one command? Twenty and EspoCRM both ship a Docker setup: see their own install guides.
 
 ## Built for agents
 
