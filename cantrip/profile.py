@@ -18,7 +18,8 @@ from typing import Any
 DEFAULT_PATH = Path("cantrip.toml")
 SENIORITY_SCALE = {"high": 1.5, "normal": 1.0, "low": 0.5, "ignore": 0.0}
 BUYER_POINTS, CHAMPION_POINTS = 25, 15
-LIST_FIELDS = ("buyer_roles", "champion_roles", "target_companies", "keywords", "languages", "deprioritize", "exclude")
+LIST_FIELDS = ("buyer_roles", "champion_roles", "why_now", "stages", "target_companies", "keywords", "languages",
+               "deprioritize", "exclude")
 
 
 class ProfileMissing(Exception):
@@ -46,7 +47,7 @@ def apply(spell: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
 
     icp = config.setdefault("icp", {})
     mine = profile.get("icp", {})
-    for key in ("target_companies", "keywords", "languages", "deprioritize", "exclude"):
+    for key in ("why_now", "stages", "target_companies", "keywords", "languages", "deprioritize", "exclude"):
         if key in mine:
             icp[key] = mine[key]
     functions = []
@@ -73,6 +74,9 @@ QUESTIONS = [
     ("buyer_roles", "Who buys it? Job roles, comma-separated", "e.g. head of engineering, platform, cto"),
     ("champion_roles", "Who uses or champions it? Comma-separated (optional)", "e.g. ml engineer, data scientist"),
     ("seniority", "How much does seniority matter? high / normal / low / ignore", "normal"),
+    ("why_now", "What makes now the right time to reach someone? Signals, comma-separated (optional; "
+                "`cantrip why-now` suggests some)", "e.g. just raised a seed round, hiring their first salesperson"),
+    ("stages", "Company stages you sell to (optional, comma-separated)", "e.g. pre-seed, seed, series a"),
     ("target_companies", "Companies you most want (optional, comma-separated)", ""),
     ("keywords", "Words that signal a good fit in a title, bio or company (comma-separated)", "e.g. rag, llm, search"),
     ("languages", "Programming languages your users write, for GitHub spells (optional)", "e.g. Python, TypeScript"),
@@ -105,6 +109,33 @@ def render(answers: dict[str, Any]) -> str:
     for key in LIST_FIELDS:
         lines.append(f"{key} = {_toml_value(answers.get(key, []))}")
     return "\n".join(lines) + "\n"
+
+
+def _table(name: str, values: dict[str, Any]) -> str:
+    lines = [f"[{name}]"]
+    for key, value in values.items():
+        if isinstance(value, str) and "\n" in value:
+            lines.append(f'{key} = """\n{value.strip()}\n"""')
+        elif isinstance(value, bool):
+            lines.append(f"{key} = {'true' if value else 'false'}")
+        elif isinstance(value, (int, float)):
+            lines.append(f"{key} = {value}")
+        elif isinstance(value, (str, list)):
+            lines.append(f"{key} = {_toml_value(value)}")
+    return "\n".join(lines)
+
+
+def update(answers: dict[str, Any], path: str | Path = DEFAULT_PATH) -> Path:
+    """Rewrite the product and ICP, keeping any [weights] or [templates] you added by hand."""
+    path = Path(path)
+    kept = {}
+    if path.exists():
+        kept = {k: v for k, v in load(path).items() if k not in ("product", "icp") and isinstance(v, dict)}
+    written = init(answers, path, interactive=False)
+    if kept:
+        written.write_text(written.read_text() + "\n" + "\n\n".join(_table(k, v) for k, v in kept.items()) + "\n")
+        load(written)
+    return written
 
 
 def init(answers: dict[str, Any], path: str | Path = DEFAULT_PATH, ask=input, interactive: bool | None = None) -> Path:

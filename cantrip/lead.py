@@ -27,6 +27,8 @@ class Lead:
     signal: str = ""  # the action itself: "registered", "attended", "contributed", "starred", "found", "mentioned"
     source_url: str = ""  # the page a web lead was found on
     evidence: str = ""  # what that page says about them, in its own words
+    why_now: str = ""  # a quote showing why now is a good time to reach them (raised, hiring, launched...)
+    stage: str = ""  # the company's stage, when a page states it (seed, Series A...)
     research: str = ""  # notes from research mode
     # What GitHub says about them, when we know their login
     followers: int = 0

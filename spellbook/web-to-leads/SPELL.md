@@ -60,6 +60,11 @@ Research mode works on any spell: `cantrip cast attendees-to-leads --csv guests.
 
 ## How it keeps leads real
 
+- Each lead needs a quote from its page; a hot lead needs a why-now quote matching your profile, from the last six months.
+- Pages naming three or more companies (roundups, directories) are skipped; so are people at a company stage your profile doesn't list.
+- Drafts are one factual hook written by AI, then your pitch and ask word for word. Hooks that guess ("you're probably...", "as you scale") are thrown out.
+
+
 - The model may only list people and companies **named on the page**. Cantrip checks: a person whose name isn't on the page is dropped, as is a title, company or LinkedIn link the page doesn't contain.
 - The quote shown as evidence must really be on the page, or it's removed so no draft is built on it.
 - A company with nobody named gets no draft: there's no one to write to yet.

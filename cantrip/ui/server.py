@@ -136,6 +136,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._save_profile(req)
         if self.path == "/api/run":
             return self._run(req)
+        if self.path == "/api/why-now":
+            return self._why_now(req)
         if self.path == "/api/crm":
             return self._crm(req)
         self._send(404, b"Not found", "text/plain")
@@ -143,7 +145,7 @@ class Handler(BaseHTTPRequestHandler):
     def _save_profile(self, req: dict[str, Any]) -> None:
         answers = {k: v for k, v in req.items() if isinstance(v, str) and v.strip()}
         try:
-            profile.init(answers, self.profile_path, interactive=False)
+            profile.update(answers, self.profile_path)
         except ValueError as err:
             return self._json({"error": str(err).replace("buyer_roles", "who buys it")}, 400)
         with self.profile_path.open("rb") as fh:
@@ -206,6 +208,21 @@ class Handler(BaseHTTPRequestHandler):
                  + (f" ({search.skipped} pages couldn't be read)" if search and search.skipped else "")) if ai else ""
         Handler.last_results = results
         self._json({"leads": [lead.to_row() for lead in results], "summary": summary(results), "usage": usage})
+
+    def _why_now(self, req: dict[str, Any]) -> None:
+        try:
+            config = profile.apply(spell.load("web-to-leads"), profile.load(self.profile_path))
+        except profile.ProfileMissing:
+            return self._json({"error": "Set up your profile first."}, 400)
+        try:
+            ai = _ai(req)
+            if not ai.ready:
+                return self._json({"error": "Add an AI key under AI and search settings (in step 2)."}, 400)
+            search = _search(req)
+            found = web_source.suggest_why_now(ai, config, search if search.ready else None, progress=lambda _: None)
+        except (AIError, SearchError) as err:
+            return self._json({"error": str(err)}, 502)
+        self._json({"signals": found, "checked": search.ready})
 
     def _crm(self, req: dict[str, Any]) -> None:
         if not self.last_results:

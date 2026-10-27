@@ -10,6 +10,7 @@ ai_drafts = true     # rewrite the best leads' drafts with AI, around what was f
 skip_domains = []    # sites to never read, on top of the built-in list (LinkedIn, YouTube, job boards...)
 
 [icp]
+hot_needs_why_now = true   # quality over quantity: a lead is hot only with a reason to reach out now
 [[icp.seniority]]
 points = 30
 words = ["founder", "co-founder", "cofounder", "ceo", "cto", "cmo", "chief", "owner", "president"]
@@ -28,6 +29,9 @@ has_company = 10
 target_company = 35
 keyword = 15
 named_person = 10        # a named person, not just a company
+why_now = 25             # the page shows a why-now signal from your profile
+stage = 10               # the company is at a stage your profile names
+wrong_stage = -40        # the page says it's at another stage (say, Series C or public)
 work_email = 10
 reachable = 5
 deprioritize = -25
@@ -39,10 +43,11 @@ warm = 30
 # Used when AI drafts are off. Fields: {first_name} {company} {title} {event} {signal} {reason}
 # {product} {pitch} {product_line} {ask} {sender}
 [templates]
+# Plain on purpose: a template can't check a hook, so it doesn't make one up.
 hot = """
 Hi {first_name},
 
-I came across {company} (it {signal}) and wanted to reach out about {product_line}. I think it could be a fit.
+I'm writing to you as {title} at {company}. I'm building {product_line}.
 
 Would you be open to {ask}?
 
@@ -51,12 +56,14 @@ Would you be open to {ask}?
 warm = """
 Hi {first_name},
 
-I came across {company} and wanted to share {product_line}, in case it's useful. Happy to tell you more.
+I'm building {product_line}, and thought it might be useful to you as {title} at {company}.
+
+Would you be open to {ask}?
 
 {sender}
 """
 default = """
-Hi {first_name}, I wanted to share {product_line}. If it sounds useful, I'd love to hear from you.
+Hi {first_name}, I'm building {product_line}. Would you be open to {ask}?
 
 {sender}
 """

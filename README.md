@@ -79,6 +79,8 @@ Cantrip doesn't assume what you sell. `cantrip init` asks:
 
 - **What you sell,** and a one-line pitch, as you'd say it to a customer
 - **Who buys it** and **who uses or champions it,** as job roles
+- **Why now:** the moments that make someone worth writing to today (just raised a seed round, hired a first head of growth, launched on Show HN). Not sure? `cantrip why-now` suggests signals for your offer and checks each one shows up on the web; in the app, press **Suggest why-now signals**
+- **Company stages** you sell to (seed, Series A...), so later-stage companies rank lower
 - **How much seniority matters** (high, normal, low or ignore)
 - **Target companies, fit keywords** and, for GitHub spells, **languages**
 - **Who to deprioritize or skip,** like students, your own company or competitors
@@ -118,6 +120,14 @@ It adds people who aren't there yet and leaves everyone already there alone (mat
 | `espocrm` | open source, self-host free | `CANTRIP_ESPO_KEY`: an API user's key (Administration > API Users). `CANTRIP_ESPO_URL`: your EspoCRM's address. Leads become Leads with status New. |
 
 Want a self-hosted CRM in one command? Twenty and EspoCRM both ship a Docker setup: see their own install guides.
+
+## Quality over quantity
+
+Cantrip would rather hand you ten leads worth writing to than a hundred names:
+
+- **A reason to write now.** Web leads need a quote from their page showing one of your why-now signals to be hot. Old news (more than six months) still counts as a fit, not as a reason.
+- **One company per page.** Roundups, rankings, investor lists and directories that name many companies are skipped.
+- **Your words, not the AI's.** A draft is one factual opening line about the lead, then your pitch and your ask exactly as your profile states them. The AI never recasts your offer to fit the lead, guesses at their problems or flatters them; if it can't state a real fact, there's no hook at all.
 
 ## Built for agents
 

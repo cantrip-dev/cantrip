@@ -8,6 +8,7 @@
     cantrip cast github-to-leads --contributors owner/repo
     cantrip cast web-to-leads --web "AI startups hiring their first DevRel"   # needs an AI model and a search key
     cantrip cast attendees-to-leads --csv guests.csv --research               # research the best leads on the web
+    cantrip why-now --save                    # suggest why-now signals for your profile, checked on the web
     cantrip search "devrel leads at AI startups"                             # check your search service works
     cantrip cast attendees-to-leads --csv guests.csv --to notion              # also add them to Notion (or hubspot, twenty, espocrm)
 """
@@ -158,6 +159,45 @@ def init(args: argparse.Namespace) -> int:
     return 0
 
 
+def why_now(args: argparse.Namespace) -> int:
+    try:
+        mine = profile.load(args.profile)
+    except profile.ProfileMissing as err:
+        print(err, file=sys.stderr)
+        return 2
+    config = profile.apply(spell.load("web-to-leads"), mine)
+    ai, search = AI.from_env(), Search.from_env()
+    problem = _check_ai(ai, None)
+    if problem:
+        print(problem, file=sys.stderr)
+        return 2
+    try:
+        found = web_source.suggest_why_now(ai, config, search if search.ready else None, progress=_progress)
+    except (AIError, SearchError) as err:
+        print(err, file=sys.stderr)
+        return 1
+    for i, s in enumerate(found, 1):
+        print(f"{i}. {s['signal']}\n   why: {s['why']}\n   search: {s['search']}")
+        for ex in s["examples"]:
+            print(f"   seen on the web: {ex['title'][:70]}  {ex['url']}")
+    if not search.ready:
+        print("(Set a search service to check each signal on the web.)")
+    if args.save and found:
+        path = Path(args.profile) if args.profile else profile.DEFAULT_PATH
+        answers = _answers(mine)
+        answers["why_now"] = list(dict.fromkeys(answers.get("why_now", []) + [s["signal"] for s in found]))
+        profile.update(answers, path)
+        print(f"Added them to {path} under why_now. Edit or delete any that don't fit.")
+    elif found:
+        print("Run again with --save to add them to your profile, or copy the ones you like into why_now.")
+    return 0
+
+
+def _answers(mine: dict) -> dict:
+    """A loaded profile flattened back into init's answers."""
+    return {**mine.get("product", {}), **mine.get("icp", {})}
+
+
 def search_check(args: argparse.Namespace) -> int:
     search = Search.from_env()
     if not search.ready:
@@ -192,6 +232,9 @@ def main(argv: list[str] | None = None) -> int:
     i.add_argument("--pitch", help="one line describing it, as you'd say it to a customer")
     i.add_argument("--buyer-roles", dest="buyer_roles", help="job roles that buy it")
     i.add_argument("--champion-roles", dest="champion_roles", help="job roles that use or champion it")
+    i.add_argument("--why-now", dest="why_now", help="signals that make now a good time to reach out, e.g. "
+                   "'just raised a seed round' (or let `cantrip why-now` suggest them)")
+    i.add_argument("--stages", help="company stages you sell to, e.g. 'seed, series a'")
     i.add_argument("--seniority", choices=list(profile.SENIORITY_SCALE), help="how much seniority matters")
     i.add_argument("--target-companies", dest="target_companies", help="companies you most want")
     i.add_argument("--keywords", help="words in a title, bio or company that signal a good fit")
@@ -210,6 +253,12 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("--profile", help="profile to use and save (default ./cantrip.toml)")
     u.add_argument("--no-browser", action="store_true", help="don't open a browser tab")
     u.set_defaults(func=ui)
+
+    w = sub.add_parser("why-now", help="suggest why-now signals for your profile (needs an AI model; a search "
+                       "service checks each on the web)")
+    w.add_argument("--profile", help="your profile (default ./cantrip.toml)")
+    w.add_argument("--save", action="store_true", help="add the suggestions to your profile")
+    w.set_defaults(func=why_now)
 
     q = sub.add_parser("search", help="check your search service: run one search and show the results")
     q.add_argument("query", nargs="?", default="developer relations lead at an AI startup")

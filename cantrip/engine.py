@@ -44,7 +44,7 @@ def enhance(results: list[Lead], config: dict[str, Any], ai, search=None, resear
         who = lead.name or lead.company or lead.github
         if research and search is not None:
             progress(f"[{i}] researching {who}")
-            lead.research = web_source.research(ai, search, lead)
+            lead.research = web_source.research(ai, search, lead, config=config)
         if ai_drafts:
             progress(f"[{i}] writing a draft for {who}")
             lead.draft = web_source.write_draft(ai, lead, config)

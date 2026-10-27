@@ -70,6 +70,8 @@
   .draft { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 14px; }
   .safe { font-size: 13px; color: var(--muted); margin-top: 10px; }
   .hidden { display: none !important; }
+  label.why { display: block; margin: 0 0 10px; font-weight: normal; }
+  label.why strong { margin-left: 4px; } label.why span { display: block; margin-left: 24px; color: #555; font-size: 13px; }
   .extras { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
   .extras label { font-weight: 500; margin: 0; }
   .extras input[type=number] { width: 64px; padding: 4px 6px; display: inline-block; }
@@ -98,7 +100,14 @@
     <p class="sub">Every spell scores people against this profile. It's saved on this computer as <code id="ppath">cantrip.toml</code>.</p>
     <div id="profile-view" class="hidden">
       <div class="profile-summary" id="profile-summary"></div>
-      <div class="actions"><button id="edit-profile">Edit profile</button></div>
+      <div class="actions"><button id="edit-profile">Edit profile</button>
+        <button id="suggest-why-now">Suggest why-now signals</button><span class="msg" id="why-msg"></span></div>
+      <div id="why-box" class="hidden">
+        <p class="sub">Moments that make now a good time to reach someone, for what you sell. Tick the ones that fit;
+          spells look for them and rank leads that show one higher.</p>
+        <div id="why-list"></div>
+        <div class="actions"><button class="primary" id="why-save">Add to my profile</button></div>
+      </div>
     </div>
     <form id="profile-form" class="hidden">
       <div class="grid" id="profile-fields"></div>
@@ -229,10 +238,10 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
-const LISTS = ["buyer_roles", "champion_roles", "target_companies", "keywords", "languages", "deprioritize", "exclude"];
-const WIDE = ["pitch", "buyer_roles", "champion_roles", "keywords"];
+const LISTS = ["buyer_roles", "champion_roles", "why_now", "stages", "target_companies", "keywords", "languages", "deprioritize", "exclude"];
+const WIDE = ["pitch", "buyer_roles", "champion_roles", "why_now", "keywords"];
 const LABELS = {name: "What you sell", pitch: "One-line pitch", buyer_roles: "Who buys it", champion_roles: "Who uses or champions it",
-  seniority: "How much seniority matters", target_companies: "Companies you most want", keywords: "Words that signal a good fit",
+  seniority: "How much seniority matters", why_now: "Why now: signals worth reaching out on", stages: "Company stages", target_companies: "Companies you most want", keywords: "Words that signal a good fit",
   languages: "Languages your users write", deprioritize: "Rank lower", exclude: "Skip these companies or domains",
   ask: "What your first note asks for", sender: "Sign drafts as"};
 const GH = {
@@ -278,7 +287,7 @@ function showProfile() {
   $("cancel-profile").classList.toggle("hidden", !has);
   if (!has) return buildProfileForm();
   const v = profileValues(state.profile);
-  const keys = ["name", "pitch", "buyer_roles", "champion_roles", "seniority", "target_companies", "keywords", "exclude", "ask"];
+  const keys = ["name", "pitch", "buyer_roles", "champion_roles", "why_now", "stages", "seniority", "target_companies", "keywords", "exclude", "ask"];
   $("profile-summary").innerHTML = keys.filter((k) => v[k]).map((k) => `<b>${esc(LABELS[k])}</b><span>${esc(v[k])}</span>`).join("");
 }
 $("edit-profile").onclick = () => { buildProfileForm(); $("profile-view").classList.add("hidden"); $("profile-form").classList.remove("hidden"); };
@@ -292,6 +301,35 @@ $("profile-form").onsubmit = async (e) => {
     $("profile-msg").textContent = "";
     showProfile();
   } catch (err) { $("profile-msg").className = "msg err"; $("profile-msg").textContent = err.message; }
+};
+
+$("suggest-why-now").onclick = async () => {
+  $("suggest-why-now").disabled = true; $("why-msg").className = "msg";
+  $("why-msg").textContent = "Thinking it through and checking each on the web (about a minute)…";
+  try {
+    const data = await api("/api/why-now", {ai_provider: $("ai-provider").value, ai_key: $("ai-key").value,
+      ai_base_url: $("ai-base-url").value, ai_model: $("ai-model").value, search_provider: $("search-provider").value,
+      search_key: $("search-provider").value === "searxng" ? "" : $("search-key").value.trim(),
+      search_url: $("search-provider").value === "searxng" ? $("search-key").value.trim() : ""});
+    const have = new Set((state.profile.icp?.why_now || []).map((x) => x.toLowerCase()));
+    $("why-list").innerHTML = data.signals.map((sig, i) => `<label class="why"><input type="checkbox" data-i="${i}"
+        ${have.has(sig.signal.toLowerCase()) ? "checked disabled" : "checked"}>
+      <strong>${esc(sig.signal)}</strong><span>${esc(sig.why)}</span>
+      ${sig.examples.length ? `<span class="hint">Seen on the web: ${sig.examples.map((e) => /^https?:\/\//.test(e.url) ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title || e.url)}</a>` : "").join(" · ")}</span>`
+        : data.checked ? '<span class="hint">Nothing found on the web for it yet: maybe skip it.</span>' : ""}</label>`).join("");
+    $("why-box").classList.remove("hidden"); $("why-box").signals = data.signals; $("why-msg").textContent = "";
+  } catch (err) { $("why-msg").className = "msg err"; $("why-msg").textContent = err.message; }
+  finally { $("suggest-why-now").disabled = false; }
+};
+$("why-save").onclick = async () => {
+  const picked = [...document.querySelectorAll("#why-list input:checked:not(:disabled)")].map((el) => $("why-box").signals[el.dataset.i].signal);
+  const v = profileValues(state.profile);
+  v.why_now = [v.why_now, ...picked].filter(Boolean).join(", ");
+  try {
+    state.profile = (await api("/api/profile", v)).profile;
+    $("why-box").classList.add("hidden"); showProfile();
+    $("why-msg").className = "msg ok"; $("why-msg").textContent = `Added ${picked.length} to your profile.`;
+  } catch (err) { $("why-msg").className = "msg err"; $("why-msg").textContent = err.message; }
 };
 
 // ---- spells and sources ----

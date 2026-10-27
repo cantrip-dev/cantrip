@@ -13,6 +13,13 @@ from typing import Any
 from cantrip.lead import Lead
 
 DEFAULT_TIERS = {"hot": 60, "warm": 30}
+YC_BATCH = re.compile(r"^(S|W|F|X|Summer|Winter|Fall|Spring)\s?'?\d{2}(\d{2})?$", re.IGNORECASE)
+
+
+def _excluded(names: str, exclude: list[str]) -> bool:
+    """Excluded by name or domain: "clay.com" also skips a company called "Clay"."""
+    bare = [re.sub(r"\.(com|io|ai|dev|co|org|net|app)$", "", word) for word in exclude]
+    return bool(_has_any(names, exclude) or _has_any(names, [b for b in bare if len(b) > 2]))
 
 
 def _has_any(text: str, words: list[str]) -> str:
@@ -34,7 +41,7 @@ def _best_level(text: str, levels: list[dict[str, Any]]) -> tuple[int, str]:
 
 
 def score(lead: Lead, icp: dict[str, Any]) -> Lead:
-    points, reasons = 0, []
+    points, reasons, wrong_stage = 0, [], False
     weights = icp.get("weights", {})
     about = " ".join([lead.title, lead.bio])
 
@@ -56,7 +63,8 @@ def score(lead: Lead, icp: dict[str, Any]) -> Lead:
         points += function
         reasons.append(f"role: {word}")
 
-    topic = _has_any(" ".join([about, company]), icp.get("keywords", []))
+    seen = " ".join([about, company, lead.evidence, lead.why_now])  # everything we know, for topic words
+    topic = _has_any(seen, icp.get("keywords", []))
     if topic:
         points += weights.get("keyword", 0)
         reasons.append(f"mentions {topic}")
@@ -87,16 +95,38 @@ def score(lead: Lead, icp: dict[str, Any]) -> Lead:
         points += weights.get("reachable", 0)
         reasons.append("reachable")
 
-    low = _has_any(about, icp.get("deprioritize", []))
+    if lead.why_now:
+        points += weights.get("why_now", 20)
+        reasons.append("why now: " + (lead.why_now[:80] + ("…" if len(lead.why_now) > 80 else "")))
+
+    stages = icp.get("stages", [])
+    if stages and lead.stage:
+        stage = lead.stage
+        if YC_BATCH.match(stage.strip()):
+            stage += " yc"  # "S2026" or "W25" is a Y Combinator batch
+        if _has_any(stage, stages):
+            points += weights.get("stage", 10)
+            reasons.append(f"stage: {lead.stage}")
+        else:
+            points += weights.get("wrong_stage", -20)
+            reasons.append(f"not your stage: {lead.stage}")
+            wrong_stage = True
+
+    low = _has_any(seen, icp.get("deprioritize", []))
     if low:
         points += weights.get("deprioritize", 0)
         reasons.append(f"lower priority: {low}")
 
-    if _has_any(" ".join([company, lead.email_domain]), icp.get("exclude", [])):
+    if _excluded(" ".join([company, lead.email_domain]), icp.get("exclude", [])):
         points, reasons = 0, ["excluded by your ICP"]
 
     tiers = icp.get("tiers", DEFAULT_TIERS)
     lead.score = max(0, min(points, 100))
     lead.tier = "hot" if lead.score >= tiers["hot"] else "warm" if lead.score >= tiers["warm"] else "cold"
+    if lead.tier == "hot" and wrong_stage:
+        lead.tier = "warm"  # a strong lead at the wrong stage is worth a look, not a first message
+    if lead.tier == "hot" and icp.get("hot_needs_why_now") and not lead.why_now:
+        lead.tier = "warm"
+        reasons.append("warm until there's a why-now signal")
     lead.reasons = reasons
     return lead
