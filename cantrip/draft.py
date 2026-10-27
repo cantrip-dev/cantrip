@@ -6,6 +6,7 @@ have it rewrite each draft around what it learns about the person instead.
 
 from __future__ import annotations
 
+import re
 from string import Formatter
 from typing import Any
 
@@ -17,14 +18,20 @@ SIGNAL_PHRASES = {
     "contributed": "contributed to {origin}",
     "starred": "starred {origin}",
     "found": "build with {topic}",
+    "mentioned": "came up on {page}",
 }
+
+
+def _site(url: str) -> str:
+    host = re.sub(r"^https?://(www\.)?", "", url).split("/")[0]
+    return host or "my research"
 
 
 def _context(lead: Lead, spell: dict[str, Any]) -> dict[str, str]:
     origin = lead.source.split(":", 1)[-1]
     product, pitch = spell.get("product", "what we're building"), spell.get("pitch", "")
     phrase = SIGNAL_PHRASES.get(lead.signal, "{origin}").format(
-        origin=origin, event=spell.get("event_name") or "the event",
+        origin=origin, event=spell.get("event_name") or "the event", page=_site(lead.source_url),
         topic=", ".join(lead.top_languages[:2]) or "open source")
     return {
         "first_name": lead.first_name,

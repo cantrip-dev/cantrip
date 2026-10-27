@@ -76,6 +76,9 @@ def score(lead: Lead, icp: dict[str, Any]) -> Lead:
     elif lead.signal == "contributed":
         points += weights.get("contributed", 0)
         reasons.append("contributed code")
+    elif lead.signal == "mentioned" and lead.name:
+        points += weights.get("named_person", 0)
+        reasons.append("named on the page")
 
     if lead.has_work_email:
         points += weights.get("work_email", 0)

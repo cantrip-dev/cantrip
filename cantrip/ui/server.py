@@ -2,8 +2,8 @@
 
 It runs on your own computer (127.0.0.1 only), uses only Python's standard
 library, and keeps everything in local files: your profile in cantrip.toml,
-your results wherever you download them. A GitHub token typed into the page
-is used for that run only and is never written to disk.
+your results wherever you download them. Keys typed into the page (GitHub,
+AI, search) are used for that run only and are never written to disk.
 """
 
 from __future__ import annotations
@@ -19,12 +19,15 @@ from pathlib import Path
 from typing import Any
 
 from cantrip import __version__, engine, profile, spell
+from cantrip.ai import AI, AIError
+from cantrip.web import Search, SearchError
 from cantrip.report import summary
 from cantrip.sources import csv_file, github
+from cantrip.sources import web as web_source
 
 HERE = Path(__file__).resolve().parent
 ALLOWED_HOSTS = ("127.0.0.1", "localhost")
-SOURCES = ("csv", "search", "users", "contributors", "stars")
+SOURCES = ("csv", "search", "users", "contributors", "stars", "web")
 MAX_BODY = 50 * 1024 * 1024
 
 
@@ -37,11 +40,28 @@ def _spells() -> list[dict[str, str]]:
     return found
 
 
-def _leads_for(req: dict[str, Any]):
+def _ai(req: dict[str, Any]) -> AI:
+    env = AI.from_env()
+    return AI.make(req.get("ai_provider") or env.provider, (req.get("ai_key") or "").strip() or env.key,
+                   (req.get("ai_base_url") or "").strip() or (env.base_url if not req.get("ai_provider") else ""),
+                   (req.get("ai_model") or "").strip() or (env.model if not req.get("ai_provider") else ""))
+
+
+def _search(req: dict[str, Any]) -> Search:
+    env = Search.from_env()
+    return Search(provider=req.get("search_provider") or env.provider,
+                  key=(req.get("search_key") or "").strip() or env.key,
+                  url=(req.get("search_url") or "").strip() or env.url)
+
+
+def _leads_for(req: dict[str, Any], config=None, ai=None, search=None):
     source, value = req.get("source"), (req.get("value") or "").strip()
     limit, enrich = int(req.get("limit") or 50), not req.get("no_enrich")
     if source not in SOURCES:
         raise ValueError("Pick where the people come from.")
+    if source == "web":
+        return web_source.find(ai, search, config, brief=value, max_queries=int(req.get("queries") or 6),
+                               pages_per_query=int(req.get("pages") or 3), progress=lambda _: None)
     if not value:
         raise ValueError("Add a CSV file." if source == "csv" else "Fill in the GitHub search, list or repo.")
     if source == "csv":
@@ -93,7 +113,8 @@ class Handler(BaseHTTPRequestHandler):
                     mine = tomllib.load(fh)
             return self._json({"version": __version__, "profile": mine, "profile_path": str(self.profile_path),
                                "spells": _spells(), "questions": [[k, q, h] for k, q, h in profile.QUESTIONS],
-                               "has_token": bool(os.environ.get("GITHUB_TOKEN"))})
+                               "has_token": bool(os.environ.get("GITHUB_TOKEN")),
+                               "has_ai": AI.from_env().ready, "has_search": Search.from_env().ready})
         self._send(404, b"Not found", "text/plain")
 
     def do_POST(self) -> None:
@@ -132,14 +153,33 @@ class Handler(BaseHTTPRequestHandler):
         if req.get("event"):
             config["event_name"] = req["event"]
         token = (req.get("token") or "").strip()
+        uses_web = req.get("source") == "web" or bool(req.get("research"))
+        ai_drafts = bool(req.get("ai_drafts", config.get("ai_drafts", False)))
+        ai = search = None
+        try:
+            if uses_web or ai_drafts:
+                ai = _ai(req)
+                if not ai.ready:
+                    return self._json({"error": "Add an AI key under AI settings (or point it at a local model)."}, 400)
+            if uses_web:
+                search = _search(req)
+                if not search.ready:
+                    return self._json({"error": "Add a search service key under AI settings."}, 400)
+        except AIError as err:
+            return self._json({"error": str(err)}, 400)
         with self.run_lock:  # one run at a time, so a typed token never leaks into another run
             saved = os.environ.get("GITHUB_TOKEN")
             if token:
                 os.environ["GITHUB_TOKEN"] = token
             try:
-                leads = _leads_for(req)
+                leads = _leads_for(req, config, ai, search)
                 results = engine.run(config, leads, add_github=bool(req.get("add_github")),
                                      min_tier=req.get("min_tier") or "cold")
+                if ai is not None and (req.get("research") or ai_drafts):
+                    engine.enhance(results, config, ai, search, research=bool(req.get("research")),
+                                   ai_drafts=ai_drafts, top=int(req.get("top") or 15), progress=lambda _: None)
+            except (AIError, SearchError) as err:
+                return self._json({"error": str(err)}, 502)
             except ValueError as err:
                 return self._json({"error": str(err)}, 400)
             except urllib.error.HTTPError as err:
@@ -155,7 +195,9 @@ class Handler(BaseHTTPRequestHandler):
                         os.environ.pop("GITHUB_TOKEN", None)
                     else:
                         os.environ["GITHUB_TOKEN"] = saved
-        self._json({"leads": [lead.to_row() for lead in results], "summary": summary(results)})
+        usage = (f"{ai.calls} AI calls" + (f", {search.searches} searches" if search else "")
+                 + (f" ({search.skipped} pages couldn't be read)" if search and search.skipped else "")) if ai else ""
+        self._json({"leads": [lead.to_row() for lead in results], "summary": summary(results), "usage": usage})
 
 
 def serve(port: int = 8765, profile_path: str | Path | None = None, open_browser: bool = True) -> None:

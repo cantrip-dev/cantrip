@@ -24,7 +24,10 @@ class Lead:
     website: str = ""
     # Where they came from
     source: str = ""  # e.g. "github-search:language:python", "csv:open-source-ai-day"
-    signal: str = ""  # the action itself: "registered", "attended", "contributed", "starred", "found"
+    signal: str = ""  # the action itself: "registered", "attended", "contributed", "starred", "found", "mentioned"
+    source_url: str = ""  # the page a web lead was found on
+    evidence: str = ""  # what that page says about them, in its own words
+    research: str = ""  # notes from research mode
     # What GitHub says about them, when we know their login
     followers: int = 0
     public_repos: int = 0
@@ -57,4 +60,5 @@ class Lead:
     @property
     def key(self) -> str:
         """What makes two rows the same person, for de-duplication."""
-        return (self.email or self.linkedin.rstrip("/") or self.github or self.name).lower()
+        return (self.email or self.linkedin.rstrip("/") or self.github or self.name
+                or f"company:{self.company}").lower()

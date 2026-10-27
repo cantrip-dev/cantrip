@@ -6,6 +6,8 @@
     cantrip cast github-to-leads --search "agents language:python location:seattle"
     cantrip cast github-to-leads --users handles.txt
     cantrip cast github-to-leads --contributors owner/repo
+    cantrip cast web-to-leads --web "AI startups hiring their first DevRel"   # needs an AI model and a search key
+    cantrip cast attendees-to-leads --csv guests.csv --research               # research the best leads on the web
 """
 
 from __future__ import annotations
@@ -17,10 +19,13 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from cantrip import __version__, engine, profile, spell
+from cantrip.ai import AI, AIError
+from cantrip.web import Search, SearchError
 from cantrip.lead import Lead
 from cantrip.report import summary
 from cantrip.sinks import csv_file as csv_sink
 from cantrip.sources import csv_file, github
+from cantrip.sources import web as web_source
 
 
 def _source(args: argparse.Namespace) -> Iterable[Lead] | None:
@@ -38,32 +43,78 @@ def _source(args: argparse.Namespace) -> Iterable[Lead] | None:
     return None
 
 
+def _progress(message: str) -> None:
+    print(message, file=sys.stderr, flush=True)
+
+
+def _check_ai(ai: AI, search: Search | None) -> str:
+    if not ai.ready:
+        return ("This needs an AI model. Set CANTRIP_AI_KEY (and CANTRIP_AI_BASE_URL / CANTRIP_AI_MODEL for a\n"
+                "provider other than OpenAI, or point CANTRIP_AI_BASE_URL at a local Ollama).")
+    if search is not None and not search.ready:
+        return ("This needs a search service. Set CANTRIP_SEARCH (tavily, brave, serpapi or searxng) and\n"
+                "CANTRIP_SEARCH_KEY, or CANTRIP_SEARCH_URL for your own SearXNG.")
+    return ""
+
+
 def cast(args: argparse.Namespace) -> int:
     try:
         mine = profile.load(args.profile)
     except profile.ProfileMissing as err:
         print(err, file=sys.stderr)
         return 2
+    if args.web is not None and args.spell == "attendees-to-leads":
+        args.spell = "web-to-leads"  # a common slip; the web source needs the web spell's scoring
     config = profile.apply(spell.load(args.spell), mine)
     if args.event:
         config["event_name"] = args.event
-    leads = _source(args)
+    ai_drafts = (config.get("ai_drafts", False) or args.ai_drafts) and not args.no_ai_drafts
+    uses_web = args.web is not None or args.research
+    ai = AI.from_env() if (uses_web or ai_drafts) else None
+    search = Search.from_env() if uses_web else None
+    if ai is not None:
+        problem = _check_ai(ai, search)
+        if problem:
+            print(problem, file=sys.stderr)
+            return 2
+
+    if args.web is not None:
+        queries = web_source.plan(ai, config, args.web, args.queries)
+        _progress("Planned searches:\n" + "\n".join(f"  - {q}" for q in queries))
+        _progress(f"Estimated cost: {len(queries)} searches, up to {len(queries) * args.pages} pages read and "
+                  f"AI calls to read them, plus up to {args.top} AI drafts"
+                  + (f" and {args.top} research lookups." if args.research else "."))
+        if args.dry_run:
+            return 0
+        leads = web_source.find(ai, search, config, queries=queries, pages_per_query=args.pages, progress=_progress)
+    else:
+        leads = _source(args)
     if leads is None:
-        print("Give a source: --csv, --search, --users, --contributors or --stars", file=sys.stderr)
+        print("Give a source: --csv, --search, --users, --contributors, --stars or --web", file=sys.stderr)
         return 2
 
     try:
         results = engine.run(config, leads, add_github=args.github, min_tier=args.min_tier)
+        if ai is not None and (args.research or ai_drafts):
+            engine.enhance(results, config, ai, search, research=args.research, ai_drafts=ai_drafts,
+                           top=args.top, progress=_progress)
     except urllib.error.HTTPError as err:
         if err.code in (401, 403):
             print(f"GitHub refused the request ({err.code}). Set GITHUB_TOKEN; for --stars GitHub always "
                   "requires one,\nand a fine-grained token only reads the repos it covers.", file=sys.stderr)
             return 1
         raise
+    except (AIError, SearchError) as err:
+        print(err, file=sys.stderr)
+        return 1
 
     count = csv_sink.write(results, args.out)
     print(f"{count} leads -> {args.out}, best first")
     print(summary(results))
+    if ai is not None:
+        print(f"Used {ai.calls} AI calls" + (f" ({ai.tokens:,} tokens)" if ai.tokens else "")
+              + (f" and {search.searches} searches" if search else "")
+              + (f"; {search.skipped} pages couldn't be read" if search and search.skipped else "") + ".")
     print("Nothing was sent. Review the drafts, then send the ones you like yourself.")
     return 0
 
@@ -131,6 +182,15 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--users", help="text file of GitHub logins or profile URLs, one per line")
     src.add_argument("--contributors", help="GitHub repo whose contributors to read, as owner/name")
     src.add_argument("--stars", help="GitHub repo whose stargazers to read, as owner/name (needs GITHUB_TOKEN)")
+    src.add_argument("--web", nargs="?", const="", metavar="BRIEF",
+                     help="search the web for leads that fit your profile; add a brief to steer it (web-to-leads)")
+    p.add_argument("--queries", type=int, default=8, help="web searches to run (default 8)")
+    p.add_argument("--pages", type=int, default=3, help="pages to read per search (default 3)")
+    p.add_argument("--dry-run", action="store_true", help="with --web: show the planned searches and stop")
+    p.add_argument("--research", action="store_true", help="research the best leads on the web before drafting")
+    p.add_argument("--ai-drafts", action="store_true", help="write the best leads' drafts with AI")
+    p.add_argument("--no-ai-drafts", action="store_true", help="use the spell's templates, not AI, for drafts")
+    p.add_argument("--top", type=int, default=15, help="how many of the best leads get research or AI drafts (default 15)")
     p.add_argument("--signal", default="registered", choices=["registered", "attended"],
                    help="what the people in the CSV did, when it has no check-in column (default: registered)")
     p.add_argument("--profile", help="your profile (default ./cantrip.toml, made by `cantrip init`)")

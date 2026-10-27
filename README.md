@@ -48,8 +48,11 @@ Each row of `leads.csv` has the person, a score from 0 to 100, a tier (hot, warm
 | --- | --- | --- |
 | [attendees-to-leads](spellbook/attendees-to-leads/) | an event guest list: name, email, company, job title, LinkedIn | attendees sorted by seniority, role and fit, with follow-up drafts |
 | [github-to-leads](spellbook/github-to-leads/) | a GitHub user search, a list of logins, a repo's contributors or stargazers | developers scored on their public profile, with first-note drafts |
+| [web-to-leads](spellbook/web-to-leads/) | the open web, searched by an AI model from your profile | named people and companies, each with its source page and a quote, and AI-written drafts |
 
-Coming next: Discord and Reddit sources, and Twenty and HubSpot outputs. Ideas and pull requests are welcome.
+Add `--research` to any spell to look up the best leads on the web and write their drafts around what turns up.
+
+Coming next: Discord and Reddit sources, and CRM outputs. Ideas and pull requests are welcome.
 
 ## Prefer clicking? Use the app
 
@@ -63,10 +66,10 @@ This opens Cantrip in your browser. Fill in your profile, drop in an attendee CS
 
 ## What it needs
 
-- **Python 3.11 or newer.** Nothing else: no packages to install, no database, no AI model, no account.
+- **Python 3.11 or newer.** Nothing else: no packages to install, no database, no account.
 - **Files in, files out.** People come in as a CSV or from GitHub's public API; leads go out as a CSV. Your profile is one small text file (`cantrip.toml`).
 - **Internet** only for the GitHub spell, which reads public GitHub profiles. A GitHub token is optional (5,000 lookups an hour instead of 60), except for stargazers, where GitHub requires one.
-- **An AI agent is optional.** The scoring and drafts are plain rules and templates you can read. Each spell's `SPELL.md` lets an agent go further: research each lead and rewrite the draft around them.
+- **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and Tavily, Brave, SerpAPI or a self-hosted SearXNG. See [web-to-leads](spellbook/web-to-leads/SPELL.md).
 
 ## Your product, your ICP
 

@@ -1,0 +1,62 @@
+# web-to-leads: an AI model plans web searches from your profile, reads the
+# pages, and lists the people and companies they name, each with a quote and
+# a link as evidence. Then it scores them and writes a draft for the best.
+#
+# Needs an AI model and a search service (see SPELL.md). What you sell and who
+# you sell to come from your profile (cantrip.toml, made by `cantrip init`).
+
+about = "Search the web for people and companies that match your ICP, with a source link for each, and AI-written drafts."
+ai_drafts = true     # rewrite the best leads' drafts with AI, around what was found
+skip_domains = []    # sites to never read, on top of the built-in list (LinkedIn, YouTube, job boards...)
+
+[icp]
+[[icp.seniority]]
+points = 30
+words = ["founder", "co-founder", "cofounder", "ceo", "cto", "cmo", "chief", "owner", "president"]
+[[icp.seniority]]
+points = 25
+words = ["vp", "vice president", "head of", "director", "general manager", "gm"]
+[[icp.seniority]]
+points = 15
+words = ["lead", "principal", "staff", "manager"]
+[[icp.seniority]]
+points = 5
+words = ["senior", "sr"]
+
+[icp.weights]
+has_company = 10
+target_company = 35
+keyword = 15
+named_person = 10        # a named person, not just a company
+work_email = 10
+reachable = 5
+deprioritize = -25
+
+[icp.tiers]
+hot = 55
+warm = 30
+
+# Used when AI drafts are off. Fields: {first_name} {company} {title} {event} {signal} {reason}
+# {product} {pitch} {product_line} {ask} {sender}
+[templates]
+hot = """
+Hi {first_name},
+
+I came across {company} (it {signal}) and wanted to reach out about {product_line}. I think it could be a fit.
+
+Would you be open to {ask}?
+
+{sender}
+"""
+warm = """
+Hi {first_name},
+
+I came across {company} and wanted to share {product_line}, in case it's useful. Happy to tell you more.
+
+{sender}
+"""
+default = """
+Hi {first_name}, I wanted to share {product_line}. If it sounds useful, I'd love to hear from you.
+
+{sender}
+"""
