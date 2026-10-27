@@ -26,3 +26,6 @@ Homepage = "https://github.com/cantrip-dev/cantrip"
 
 [tool.setuptools.packages.find]
 include = ["cantrip*"]
+
+[tool.setuptools.package-data]
+"cantrip.ui" = ["index.html", "logo.png"]

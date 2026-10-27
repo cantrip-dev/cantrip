@@ -47,6 +47,23 @@ Each row of `leads.csv` has the person, a score from 0 to 100, a tier (hot, warm
 
 Coming next: Discord and Reddit sources, and Twenty and HubSpot outputs. Ideas and pull requests are welcome.
 
+## Prefer clicking? Use the app
+
+```bash
+cantrip ui
+```
+
+This opens Cantrip in your browser. Fill in your profile, drop in an attendee CSV or type a GitHub search, and press **Cast it**. You get your leads best-first, can filter by tier, read and copy each draft, and download the CSV. The app runs only on your own computer (127.0.0.1) and saves nothing but your profile.
+
+<p align="center"><img src="assets/ui.png" alt="The Cantrip app: a profile, a spell, and sorted leads with drafts" width="720"></p>
+
+## What it needs
+
+- **Python 3.11 or newer.** Nothing else: no packages to install, no database, no AI model, no account.
+- **Files in, files out.** People come in as a CSV or from GitHub's public API; leads go out as a CSV. Your profile is one small text file (`cantrip.toml`).
+- **Internet** only for the GitHub spell, which reads public GitHub profiles. A GitHub token is optional (5,000 lookups an hour instead of 60), except for stargazers, where GitHub requires one.
+- **An AI agent is optional.** The scoring and drafts are plain rules and templates you can read. Each spell's `SPELL.md` lets an agent go further: research each lead and rewrite the draft around them.
+
 ## Your product, your ICP
 
 Cantrip doesn't assume what you sell. `cantrip init` asks:

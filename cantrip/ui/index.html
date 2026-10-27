@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cantrip</title>
+<link rel="icon" href="/logo.png">
+<style>
+  :root {
+    --ink: #1d1530; --muted: #6b6380; --line: #e7e2ef; --bg: #f7f5fa; --card: #fff;
+    --brand: #420069; --brand-soft: #f1e9f6; --gold: #f4b63f;
+    --hot: #b42318; --hot-bg: #fdecea; --warm: #9a6700; --warm-bg: #fff4d6; --cold: #475467; --cold-bg: #eef1f5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg); }
+  header { display: flex; align-items: center; gap: 12px; padding: 18px 28px; background: var(--card); border-bottom: 1px solid var(--line); }
+  header img { width: 34px; height: auto; }
+  header h1 { font-size: 20px; margin: 0; color: var(--brand); letter-spacing: -.01em; }
+  header .tag { color: var(--muted); font-size: 14px; }
+  header .ver { margin-left: auto; color: var(--muted); font-size: 12px; }
+  main { max-width: 1120px; margin: 0 auto; padding: 24px 20px 60px; display: grid; gap: 20px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; }
+  h2 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h2 .n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 13px; }
+  .sub { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+  label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  label .hint { font-weight: 400; color: var(--muted); }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; color: inherit;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
+  .grid .wide { grid-column: 1 / -1; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 14px; color: var(--ink); }
+  button.primary { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 600; padding: 10px 18px; }
+  button.primary:disabled { opacity: .6; cursor: wait; }
+  button.link { border: none; background: none; color: var(--brand); padding: 0; font-weight: 600; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .actions { margin-top: 18px; }
+  .msg { font-size: 14px; }
+  .msg.err { color: var(--hot); }
+  .msg.ok { color: #067647; }
+  .profile-summary { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .profile-summary b { color: var(--muted); font-weight: 600; }
+  .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .choice { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; }
+  .choice input { display: none; }
+  .choice.on { border-color: var(--brand); background: var(--brand-soft); }
+  .choice strong { display: block; }
+  .choice span { color: var(--muted); font-size: 13px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tabs button.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 22px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop.over, .drop.has { border-color: var(--brand); color: var(--ink); background: var(--brand-soft); }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stat { padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: 13px; cursor: pointer; border: 2px solid transparent; }
+  .stat.on { border-color: currentColor; }
+  .t-hot { color: var(--hot); background: var(--hot-bg); } .t-warm { color: var(--warm); background: var(--warm-bg); } .t-cold { color: var(--cold); background: var(--cold-bg); }
+  .t-all { color: var(--brand); background: var(--brand-soft); }
+  .companies { font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .score { display: inline-block; min-width: 42px; text-align: center; padding: 3px 8px; border-radius: 999px; font-weight: 700; }
+  .who strong { display: block; }
+  .who span { color: var(--muted); }
+  .links a { color: var(--brand); margin-right: 8px; text-decoration: none; font-size: 13px; }
+  .reasons { color: var(--muted); }
+  .draft { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 14px; }
+  .safe { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .hidden { display: none !important; }
+  .spinner { width: 16px; height: 16px; border: 2px solid #fff6; border-top-color: #fff; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; vertical-align: -3px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .hide-sm { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <img src="/logo.png" alt="">
+  <h1>Cantrip</h1>
+  <span class="tag">Go-to-market, cast at will.</span>
+  <span class="ver" id="ver"></span>
+</header>
+
+<main>
+  <!-- 1. Profile -->
+  <section id="profile">
+    <h2><span class="n">1</span> What you sell, and who buys it</h2>
+    <p class="sub">Every spell scores people against this profile. It's saved on this computer as <code id="ppath">cantrip.toml</code>.</p>
+    <div id="profile-view" class="hidden">
+      <div class="profile-summary" id="profile-summary"></div>
+      <div class="actions"><button id="edit-profile">Edit profile</button></div>
+    </div>
+    <form id="profile-form" class="hidden">
+      <div class="grid" id="profile-fields"></div>
+      <div class="row actions">
+        <button class="primary" type="submit">Save profile</button>
+        <button type="button" id="cancel-profile" class="hidden">Cancel</button>
+        <span class="msg" id="profile-msg"></span>
+      </div>
+    </form>
+  </section>
+
+  <!-- 2. Cast -->
+  <section id="cast">
+    <h2><span class="n">2</span> Cast a spell</h2>
+    <p class="sub">Pick a workflow and give it people. Nothing is ever sent: you get a sorted list with drafts to review.</p>
+    <div class="choices" id="spells"></div>
+
+    <div id="src-csv">
+      <div class="drop" id="drop">
+        <input type="file" id="file" accept=".csv,text/csv" class="hidden">
+        <div id="drop-text"><strong>Drop your attendee CSV here</strong>, or click to choose it.<br>
+          A Luma export or any list with name, email, company, job title and LinkedIn.</div>
+      </div>
+      <div class="grid" style="margin-top:14px">
+        <div><label>Event name <span class="hint">(used in the drafts)</span></label><input type="text" id="event" placeholder="e.g. Open Source AI Day"></div>
+        <div><label>If the list has no check-in column, these people</label>
+          <select id="signal"><option value="registered">registered</option><option value="attended">attended</option></select></div>
+        <div class="wide"><label><input type="checkbox" id="add-github"> Also read each person's GitHub profile <span class="hint">(when the list has a GitHub column)</span></label></div>
+      </div>
+    </div>
+
+    <div id="src-github" class="hidden">
+      <div class="tabs" id="gh-tabs">
+        <button type="button" data-src="search" class="on">Search GitHub</button>
+        <button type="button" data-src="users">A list of people</button>
+        <button type="button" data-src="contributors">A repo's contributors</button>
+        <button type="button" data-src="stars">A repo's stargazers</button>
+      </div>
+      <div class="grid">
+        <div class="wide" id="gh-input-wrap"></div>
+        <div><label>How many people <span class="hint">(at most)</span></label><input type="number" id="limit" value="30" min="1" max="1000"></div>
+        <div><label>GitHub token <span class="hint" id="token-hint">(optional: more lookups an hour; used for this run only)</span></label>
+          <input type="password" id="token" autocomplete="off" placeholder="ghp_… or github_pat_…"></div>
+      </div>
+    </div>
+
+    <div class="row actions">
+      <label style="margin:0">Show</label>
+      <select id="min-tier" style="width:auto"><option value="cold">everyone</option><option value="warm">hot and warm</option><option value="hot">hot only</option></select>
+      <button class="primary" id="run">Cast it</button>
+      <span class="msg" id="run-msg"></span>
+    </div>
+  </section>
+
+  <!-- 3. Results -->
+  <section id="results" class="hidden">
+    <h2><span class="n">3</span> Your leads, best first</h2>
+    <p class="sub">Each score comes with its reasons. Open a row to read and copy its draft.</p>
+    <div class="stats" id="stats"></div>
+    <div class="companies" id="companies"></div>
+    <div class="row" style="margin-bottom:12px">
+      <input type="text" id="filter" placeholder="Filter by name, company or title" style="max-width:320px">
+      <button id="download">Download CSV</button>
+    </div>
+    <table>
+      <thead><tr><th>Score</th><th>Person</th><th class="hide-sm">Why</th><th class="hide-sm">Reach</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="safe">Nothing was sent. Review the drafts, then send the ones you like yourself.</p>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const LISTS = ["buyer_roles", "champion_roles", "target_companies", "keywords", "languages", "deprioritize", "exclude"];
+const WIDE = ["pitch", "buyer_roles", "champion_roles", "keywords"];
+const LABELS = {name: "What you sell", pitch: "One-line pitch", buyer_roles: "Who buys it", champion_roles: "Who uses or champions it",
+  seniority: "How much seniority matters", target_companies: "Companies you most want", keywords: "Words that signal a good fit",
+  languages: "Languages your users write", deprioritize: "Rank lower", exclude: "Skip these companies or domains",
+  ask: "What your first note asks for", sender: "Sign drafts as"};
+const GH = {
+  search: {label: "GitHub search", hint: 'e.g. "developer advocate" in:bio followers:>100, or ai agents language:python location:seattle', area: false},
+  users: {label: "GitHub logins or profile links", hint: "one per line", area: true},
+  contributors: {label: "Repo", hint: "owner/name, e.g. langchain-ai/langgraph", area: false},
+  stars: {label: "Repo", hint: "owner/name. GitHub needs a token for stargazers", area: false},
+};
+let state = {}, csvText = "", csvName = "", ghSource = "search", leads = [], tierFilter = "all";
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
+  const data = await res.json().catch(() => ({error: "Something went wrong."}));
+  if (!res.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+
+// ---- profile ----
+function profileValues(p) {
+  if (!p) return {};
+  const v = {...(p.product || {}), ...(p.icp || {})};
+  for (const k of LISTS) if (Array.isArray(v[k])) v[k] = v[k].join(", ");
+  return v;
+}
+function buildProfileForm() {
+  const v = profileValues(state.profile);
+  $("profile-fields").innerHTML = state.questions.map(([key, question, hint]) => {
+    const wide = WIDE.includes(key) ? " wide" : "";
+    const req = ["name", "pitch", "buyer_roles"].includes(key) ? " *" : "";
+    let input;
+    if (key === "seniority") {
+      input = `<select name="seniority">${["normal", "high", "low", "ignore"].map((o) => `<option${(v.seniority || "normal") === o ? " selected" : ""}>${o}</option>`).join("")}</select>`;
+    } else {
+      input = `<input type="text" name="${key}" value="${esc(v[key])}" placeholder="${esc(hint.replace(/^e\.g\. /, "e.g. "))}">`;
+    }
+    return `<div class="${wide}"><label>${esc(LABELS[key] || question)}${req}${LISTS.includes(key) ? ' <span class="hint">(comma-separated)</span>' : ""}</label>${input}</div>`;
+  }).join("");
+}
+function showProfile() {
+  const has = !!state.profile;
+  $("profile-view").classList.toggle("hidden", !has);
+  $("profile-form").classList.toggle("hidden", has);
+  $("cancel-profile").classList.toggle("hidden", !has);
+  if (!has) return buildProfileForm();
+  const v = profileValues(state.profile);
+  const keys = ["name", "pitch", "buyer_roles", "champion_roles", "seniority", "target_companies", "keywords", "exclude", "ask"];
+  $("profile-summary").innerHTML = keys.filter((k) => v[k]).map((k) => `<b>${esc(LABELS[k])}</b><span>${esc(v[k])}</span>`).join("");
+}
+$("edit-profile").onclick = () => { buildProfileForm(); $("profile-view").classList.add("hidden"); $("profile-form").classList.remove("hidden"); };
+$("cancel-profile").onclick = showProfile;
+$("profile-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData(e.target).entries());
+  $("profile-msg").className = "msg"; $("profile-msg").textContent = "Saving…";
+  try {
+    state.profile = (await api("/api/profile", body)).profile;
+    $("profile-msg").textContent = "";
+    showProfile();
+  } catch (err) { $("profile-msg").className = "msg err"; $("profile-msg").textContent = err.message; }
+};
+
+// ---- spells and sources ----
+let currentSpell = "";
+function buildSpells() {
+  $("spells").innerHTML = state.spells.map((s) => `<label class="choice" data-spell="${esc(s.name)}"><input type="radio" name="spell" value="${esc(s.name)}"><strong>${esc(s.name)}</strong><span>${esc(s.about)}</span></label>`).join("");
+  document.querySelectorAll(".choice").forEach((el) => el.onclick = () => pickSpell(el.dataset.spell));
+  pickSpell(state.spells.find((s) => s.name === "attendees-to-leads") ? "attendees-to-leads" : state.spells[0]?.name);
+}
+function pickSpell(name) {
+  currentSpell = name;
+  document.querySelectorAll(".choice").forEach((el) => el.classList.toggle("on", el.dataset.spell === name));
+  const isCsv = !name.startsWith("github");
+  $("src-csv").classList.toggle("hidden", !isCsv);
+  $("src-github").classList.toggle("hidden", isCsv);
+}
+function buildGhInput() {
+  const g = GH[ghSource];
+  $("gh-input-wrap").innerHTML = `<label>${esc(g.label)} <span class="hint">(${esc(g.hint)})</span></label>` +
+    (g.area ? `<textarea id="gh-value" placeholder="octocat&#10;https://github.com/torvalds"></textarea>` : `<input type="text" id="gh-value">`);
+  document.querySelectorAll("#gh-tabs button").forEach((b) => b.classList.toggle("on", b.dataset.src === ghSource));
+}
+document.querySelectorAll("#gh-tabs button").forEach((b) => b.onclick = () => { ghSource = b.dataset.src; buildGhInput(); });
+
+function loadFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    csvText = reader.result; csvName = file.name.replace(/\.csv$/i, "");
+    const rows = Math.max(0, csvText.trim().split(/\r?\n/).length - 1);
+    $("drop").classList.add("has");
+    $("drop-text").innerHTML = `<strong>${esc(file.name)}</strong>: about ${rows} rows. Click to choose another file.`;
+  };
+  reader.readAsText(file);
+}
+$("drop").onclick = () => $("file").click();
+$("file").onchange = (e) => loadFile(e.target.files[0]);
+$("drop").ondragover = (e) => { e.preventDefault(); $("drop").classList.add("over"); };
+$("drop").ondragleave = () => $("drop").classList.remove("over");
+$("drop").ondrop = (e) => { e.preventDefault(); $("drop").classList.remove("over"); loadFile(e.dataTransfer.files[0]); };
+
+// ---- run ----
+$("run").onclick = async () => {
+  const isCsv = !currentSpell.startsWith("github");
+  const body = {
+    spell: currentSpell, source: isCsv ? "csv" : ghSource, value: isCsv ? csvText : ($("gh-value")?.value || ""),
+    filename: csvName, event: $("event").value, signal: $("signal").value, add_github: $("add-github").checked,
+    limit: $("limit").value, token: isCsv && !$("add-github").checked ? "" : $("token").value, min_tier: $("min-tier").value,
+  };
+  $("run").disabled = true; $("run").innerHTML = '<span class="spinner"></span>Casting…';
+  $("run-msg").className = "msg"; $("run-msg").textContent = isCsv ? "" : "Reading GitHub profiles can take a minute.";
+  try {
+    const data = await api("/api/run", body);
+    leads = data.leads; tierFilter = "all";
+    renderResults(data.summary);
+    $("run-msg").className = "msg ok"; $("run-msg").textContent = `${leads.length} leads, best first.`;
+    $("results").scrollIntoView({behavior: "smooth"});
+  } catch (err) { $("run-msg").className = "msg err"; $("run-msg").textContent = err.message; }
+  finally { $("run").disabled = false; $("run").textContent = "Cast it"; }
+};
+
+function renderResults(summary) {
+  $("results").classList.remove("hidden");
+  const count = (t) => leads.filter((l) => l.tier === t).length;
+  $("stats").innerHTML = [["all", `All ${leads.length}`], ["hot", `Hot ${count("hot")}`], ["warm", `Warm ${count("warm")}`], ["cold", `Cold ${count("cold")}`]]
+    .map(([t, label]) => `<span class="stat t-${t}${tierFilter === t ? " on" : ""}" data-tier="${t}">${label}</span>`).join("");
+  document.querySelectorAll(".stat").forEach((el) => el.onclick = () => { tierFilter = el.dataset.tier; renderResults(summary); });
+  const multi = (summary.split("\n").find((l) => l.startsWith("Companies with")) || "");
+  $("companies").textContent = multi;
+  renderRows();
+}
+function renderRows() {
+  const q = $("filter").value.toLowerCase();
+  const shown = leads.filter((l) => (tierFilter === "all" || l.tier === tierFilter) &&
+    (!q || [l.name, l.github, l.company, l.title].join(" ").toLowerCase().includes(q)));
+  $("rows").innerHTML = shown.map((l, i) => {
+    const links = [
+      l.email && `<a href="mailto:${esc(l.email)}">email</a>`,
+      l.linkedin && `<a href="${esc(l.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`,
+      l.github && `<a href="https://github.com/${esc(l.github)}" target="_blank" rel="noopener">GitHub</a>`,
+      l.website && /^https?:\/\//.test(l.website) && `<a href="${esc(l.website)}" target="_blank" rel="noopener">site</a>`,
+    ].filter(Boolean).join("");
+    const role = [l.title, l.company].filter(Boolean).join(" at ");
+    return `<tr><td><span class="score t-${esc(l.tier)}">${esc(l.score)}</span></td>
+      <td class="who"><strong>${esc(l.name || l.github)}</strong><span>${esc(role)}</span>
+        <div id="d${i}" class="draft hidden">${esc(l.draft)}</div></td>
+      <td class="reasons hide-sm">${esc(l.reasons)}</td><td class="links hide-sm">${links}</td>
+      <td><button class="link" data-i="${i}">Draft</button></td></tr>`;
+  }).join("") || `<tr><td colspan="5" class="reasons">No one matches.</td></tr>`;
+  document.querySelectorAll("#rows button.link").forEach((b) => b.onclick = () => {
+    const d = $("d" + b.dataset.i);
+    if (d.classList.contains("hidden")) { d.classList.remove("hidden"); b.textContent = "Copy"; }
+    else { navigator.clipboard.writeText(d.textContent); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1500); }
+  });
+}
+$("filter").oninput = renderRows;
+
+$("download").onclick = () => {
+  if (!leads.length) return;
+  const cols = Object.keys(leads[0]);
+  const cell = (v) => /[",\n]/.test(v) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const csv = [cols.join(","), ...leads.map((l) => cols.map((c) => cell(l[c] ?? "")).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
+  a.download = `${currentSpell}-leads.csv`; a.click();
+};
+
+// ---- start ----
+(async () => {
+  state = await api("/api/state");
+  $("ver").textContent = "v" + state.version;
+  $("ppath").textContent = state.profile_path;
+  if (state.has_token) $("token-hint").textContent = "(already set on this computer; leave empty to use it)";
+  showProfile(); buildSpells(); buildGhInput();
+})();
+</script>
+</body>
+</html>

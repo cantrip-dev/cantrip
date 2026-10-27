@@ -9,6 +9,7 @@ so on. A Luma export's `checked_in_at` column marks who actually attended.
 from __future__ import annotations
 
 import csv
+import io
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -51,20 +52,28 @@ def _attended(value: str) -> bool:
 def people(path: str | Path, source: str = "", signal: str = "registered") -> Iterator[Lead]:
     path = Path(path)
     with path.open(newline="", encoding="utf-8-sig") as fh:
-        reader = csv.DictReader(fh)
-        columns = _match_columns(reader.fieldnames or [])
-        for row in reader:
-            values = {field: (row.get(header) or "").strip() for field, header in columns.items()}
-            if not values.get("name"):
-                first = (row.get("first_name") or row.get("First Name") or "").strip()
-                last = (row.get("last_name") or row.get("Last Name") or "").strip()
-                values["name"] = f"{first} {last}".strip()
-            lead = Lead(source=source or f"csv:{path.stem}", signal=signal)
-            for field in ("name", "email", "company", "title", "linkedin", "location", "website"):
-                setattr(lead, field, values.get(field, ""))
-            if values.get("github"):
-                lead.github = login_from(values["github"])
-            if "attended" in values:
-                lead.signal = "attended" if _attended(values["attended"]) else signal
-            if lead.name or lead.email or lead.linkedin:
-                yield lead
+        yield from _read(csv.DictReader(fh), source or f"csv:{path.stem}", signal)
+
+
+def people_from_text(text: str, source: str = "csv:upload", signal: str = "registered") -> Iterator[Lead]:
+    """Same as `people`, for CSV text already in memory (an upload in the UI)."""
+    yield from _read(csv.DictReader(io.StringIO(text.lstrip("\ufeff"))), source, signal)
+
+
+def _read(reader: csv.DictReader, source: str, signal: str) -> Iterator[Lead]:
+    columns = _match_columns(reader.fieldnames or [])
+    for row in reader:
+        values = {field: (row.get(header) or "").strip() for field, header in columns.items()}
+        if not values.get("name"):
+            first = (row.get("first_name") or row.get("First Name") or "").strip()
+            last = (row.get("last_name") or row.get("Last Name") or "").strip()
+            values["name"] = f"{first} {last}".strip()
+        lead = Lead(source=source, signal=signal)
+        for field in ("name", "email", "company", "title", "linkedin", "location", "website"):
+            setattr(lead, field, values.get(field, ""))
+        if values.get("github"):
+            lead.github = login_from(values["github"])
+        if "attended" in values:
+            lead.signal = "attended" if _attended(values["attended"]) else signal
+        if lead.name or lead.email or lead.linkedin:
+            yield lead

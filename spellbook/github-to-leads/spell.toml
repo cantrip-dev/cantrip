@@ -5,6 +5,7 @@
 # What you sell and who you sell to come from your profile (cantrip.toml,
 # made by `cantrip init`). This file only holds how the spell scores and writes.
 
+about = "Find developers by their GitHub profile: a search, a list, a repo's contributors or stargazers."
 [icp]
 influencer_followers = 500  # followers that count as influence
 

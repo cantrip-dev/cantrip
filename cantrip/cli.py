@@ -1,5 +1,6 @@
 """cantrip: turn people who showed interest into a sorted list of leads with drafted notes.
 
+    cantrip ui                        # the same, in your browser
     cantrip init                      # describe what you sell and who you sell to
     cantrip cast attendees-to-leads --csv guests.csv --event "Open Source AI Day"
     cantrip cast github-to-leads --search "agents language:python location:seattle"
@@ -12,14 +13,12 @@ from __future__ import annotations
 import argparse
 import sys
 import urllib.error
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 from pathlib import Path
 
-from cantrip import __version__, profile, spell
-from cantrip.draft import draft
+from cantrip import __version__, engine, profile, spell
 from cantrip.lead import Lead
 from cantrip.report import summary
-from cantrip.score import score
 from cantrip.sinks import csv_file as csv_sink
 from cantrip.sources import csv_file, github
 
@@ -39,15 +38,6 @@ def _source(args: argparse.Namespace) -> Iterable[Lead] | None:
     return None
 
 
-def _unique(leads: Iterable[Lead]) -> Iterator[Lead]:
-    seen = set()
-    for lead in leads:
-        if lead.key and lead.key in seen:
-            continue
-        seen.add(lead.key)
-        yield lead
-
-
 def cast(args: argparse.Namespace) -> int:
     try:
         mine = profile.load(args.profile)
@@ -62,12 +52,8 @@ def cast(args: argparse.Namespace) -> int:
         print("Give a source: --csv, --search, --users, --contributors or --stars", file=sys.stderr)
         return 2
 
-    results = []
     try:
-        for lead in _unique(leads):
-            if args.github and lead.github and not lead.followers:
-                github.enrich(lead)
-            results.append(draft(score(lead, config.get("icp", {})), config))
+        results = engine.run(config, leads, add_github=args.github, min_tier=args.min_tier)
     except urllib.error.HTTPError as err:
         if err.code in (401, 403):
             print(f"GitHub refused the request ({err.code}). Set GITHUB_TOKEN; for --stars GitHub always "
@@ -75,10 +61,6 @@ def cast(args: argparse.Namespace) -> int:
             return 1
         raise
 
-    results.sort(key=lambda lead: lead.score, reverse=True)
-    if args.min_tier != "cold":
-        keep = {"hot"} if args.min_tier == "hot" else {"hot", "warm"}
-        results = [lead for lead in results if lead.tier in keep]
     count = csv_sink.write(results, args.out)
     print(f"{count} leads -> {args.out}, best first")
     print(summary(results))
@@ -101,6 +83,13 @@ def init(args: argparse.Namespace) -> int:
         return 2
     print(f"Saved your profile to {written}. Every spell will now score leads against it.")
     print("Next: cantrip cast attendees-to-leads --csv guests.csv   or   cantrip cast github-to-leads --search \"...\"")
+    return 0
+
+
+def ui(args: argparse.Namespace) -> int:
+    from cantrip.ui.server import serve
+
+    serve(port=args.port, profile_path=args.profile, open_browser=not args.no_browser)
     return 0
 
 
@@ -127,6 +116,12 @@ def main(argv: list[str] | None = None) -> int:
     i.add_argument("--out", default=str(profile.DEFAULT_PATH), help="where to save it (default cantrip.toml)")
     i.add_argument("--force", action="store_true", help="overwrite an existing profile")
     i.set_defaults(func=init)
+
+    u = sub.add_parser("ui", help="open Cantrip in your browser (runs on this computer only)")
+    u.add_argument("--port", type=int, default=8765, help="port to use (default 8765)")
+    u.add_argument("--profile", help="profile to use and save (default ./cantrip.toml)")
+    u.add_argument("--no-browser", action="store_true", help="don't open a browser tab")
+    u.set_defaults(func=ui)
 
     p = sub.add_parser("cast", help="run a spell from the spellbook")
     p.add_argument("spell", help="spell name (e.g. attendees-to-leads) or path to its folder")

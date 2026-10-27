@@ -5,6 +5,7 @@
 # What you sell and who you sell to come from your profile (cantrip.toml,
 # made by `cantrip init`). This file only holds how the spell scores and writes.
 
+about = "Sort an event guest list (name, email, company, title, LinkedIn) by fit, with follow-up drafts."
 event_name = ""      # or pass --event "Your Event Name"
 
 [icp]
