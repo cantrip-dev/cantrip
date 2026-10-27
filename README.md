@@ -15,8 +15,12 @@ Each workflow is a **spell**: a small, product-neutral folder with its scoring r
 
 ## Quick start
 
+Cantrip needs Python 3.11 or newer. Check with `python3 --version`. On a Mac, the built-in `python3` is 3.9, so install a newer one first (`brew install python@3.12`) and make the environment with it:
+
 ```bash
-pip install git+https://github.com/cantrip-dev/cantrip
+git clone https://github.com/cantrip-dev/cantrip.git && cd cantrip
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -e .
 
 # 1. Tell Cantrip what you sell and who buys it (a few questions, saved to cantrip.toml)
 cantrip init
