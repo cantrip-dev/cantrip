@@ -2,8 +2,8 @@
 
 Thanks for helping! The fastest ways in:
 
-- **Write a spell.** Copy `spellbook/stargazers-to-leads/`, change it for a new signal (Discord joins, Reddit threads, docs visits...) and open a pull request.
-- **Add a source or a sink.** Sources live in `cantrip/sources/`, outputs in `cantrip/sinks/`. Twenty and HubSpot sinks are wanted.
+- **Write a spell.** Copy `spellbook/attendees-to-leads/`, change it for a new signal (Discord joins, Reddit threads, docs visits...) and open a pull request.
+- **Add a source or a sink.** Sources live in `cantrip/sources/`, outputs in `cantrip/sinks/`. Twenty and HubSpot outputs are wanted.
 - **Report what didn't work** in an issue, with the command you ran.
 
 ## Setup

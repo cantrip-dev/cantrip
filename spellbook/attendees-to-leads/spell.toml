@@ -1,0 +1,78 @@
+# attendees-to-leads: an event guest list (name, email, company, job title,
+# LinkedIn...) sorted into the people most worth following up with, each with
+# a drafted note. Works with a Luma export or any registration CSV.
+# Copy this file and edit it for your own event and offer.
+
+product = "working together"  # what you're following up about, e.g. "sponsoring our next event"
+sender = ""          # your first name, used to sign the drafts
+event_name = ""      # or pass --event "Open Source AI Day"
+ask = "Would you be open to a quick call next week?"
+
+[icp]
+# Whole words or phrases, matched case-insensitively.
+target_companies = []    # e.g. ["Databricks", "Snowflake", "Redis"]: matched on company and email domain
+keywords = ["ai", "llm", "agents", "open source", "devtools", "developer tools", "infra", "platform", "data"]
+deprioritize = ["student", "intern", "looking for", "job seeker", "unemployed", "between roles"]
+exclude = []             # companies or email domains to skip, e.g. ["yourcompany.com"]
+
+# Seniority: the highest matching level counts.
+[[icp.seniority]]
+points = 30
+words = ["founder", "co-founder", "cofounder", "ceo", "cto", "cmo", "chief", "owner", "president"]
+[[icp.seniority]]
+points = 25
+words = ["vp", "vice president", "head of", "director", "general manager", "gm"]
+[[icp.seniority]]
+points = 15
+words = ["lead", "principal", "staff", "manager"]
+[[icp.seniority]]
+points = 5
+words = ["senior", "sr"]
+
+# Job function: who buys or champions what you sell. The highest matching one counts.
+[[icp.functions]]
+points = 25
+words = ["developer relations", "devrel", "developer advocate", "developer advocacy", "developer experience", "community"]
+[[icp.functions]]
+points = 20
+words = ["marketing", "growth", "partnerships", "partner", "go-to-market", "gtm", "sales", "business development", "ecosystem"]
+[[icp.functions]]
+points = 10
+words = ["engineering", "engineer", "developer", "product", "ml", "ai", "data"]
+
+[icp.weights]
+has_company = 10
+target_company = 35
+keyword = 10
+attended = 10            # checked in (Luma's checked_in_at column), not just registered
+work_email = 10
+reachable = 5            # a personal email or a LinkedIn URL
+deprioritize = -25
+
+[icp.tiers]
+hot = 60
+warm = 35
+
+# Templates per tier. Fields: {first_name} {company} {title} {event} {signal} {reason} {sender} {product} {ask}
+[templates]
+hot = """
+Hi {first_name},
+
+Thanks for joining us at {event}. I'd love to hear what {company} is working on, and talk about {product}.
+
+{ask}
+
+{sender}
+"""
+warm = """
+Hi {first_name},
+
+Thanks for coming to {event}! If {company} would be up for {product}, I'd be glad to share more.
+
+{sender}
+"""
+default = """
+Hi {first_name}, thanks for being part of {event}! Hope to see you at the next one.
+
+{sender}
+"""

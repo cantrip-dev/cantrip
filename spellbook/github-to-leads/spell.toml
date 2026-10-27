@@ -1,0 +1,81 @@
+# github-to-leads: find developers by their GitHub profile (a search, a list of
+# logins, a repo's contributors or stargazers), score them on who you sell to,
+# and draft a first note. Copy this file and edit it for your own product.
+
+product = "Cantrip"
+sender = ""          # your first name, used to sign the drafts
+ask = "Would you be up for a 15-minute call to tell me what you'd want it to do?"
+
+[icp]
+# Whole words or phrases, matched case-insensitively against the profile's
+# company, bio and (from an attendee list) job title.
+target_companies = []    # e.g. ["Databricks", "Snowflake", "Redis"]
+keywords = ["ai", "llm", "agents", "open source", "open-source", "devtools", "developer tools", "infra", "api", "sdk"]
+languages = ["Python", "TypeScript", "Go", "Rust"]
+deprioritize = ["student", "learning", "aspiring", "looking for"]
+exclude = []             # companies or email domains to skip
+influencer_followers = 500
+
+# Seniority: the highest matching level counts.
+[[icp.seniority]]
+points = 30
+words = ["founder", "co-founder", "cofounder", "ceo", "cto", "cmo", "chief", "owner", "president"]
+[[icp.seniority]]
+points = 25
+words = ["vp", "vice president", "head of", "director", "general manager", "gm"]
+[[icp.seniority]]
+points = 15
+words = ["lead", "principal", "staff", "manager"]
+[[icp.seniority]]
+points = 5
+words = ["senior", "sr"]
+
+# Job function: who buys or champions what you sell. The highest matching one counts.
+[[icp.functions]]
+points = 25
+words = ["developer relations", "devrel", "developer advocate", "developer advocacy", "developer experience", "community"]
+[[icp.functions]]
+points = 20
+words = ["marketing", "growth", "partnerships", "partner", "go-to-market", "gtm", "sales", "business development", "ecosystem"]
+[[icp.functions]]
+points = 10
+words = ["engineering", "engineer", "developer", "product", "ml", "ai", "data"]
+
+[icp.weights]
+has_company = 10
+target_company = 35
+keyword = 15
+language = 10            # one of their most-used languages is in your list
+influence = 15           # at least influencer_followers followers
+contributed = 10         # committed to the repo you read
+work_email = 10
+reachable = 5            # public email, website or blog on the profile
+deprioritize = -20
+
+[icp.tiers]
+hot = 60
+warm = 30
+
+# Templates per tier. Fields: {first_name} {company} {title} {event} {signal} {reason} {sender} {product} {ask}
+[templates]
+hot = """
+Hi {first_name},
+
+I came across your GitHub: you {signal}. I'm building {product} for teams like {company} who sell to developers, and I'd value your take.
+
+{ask}
+
+{sender}
+"""
+warm = """
+Hi {first_name},
+
+I came across your GitHub and liked what you're building. I'm working on {product} in the open and would love to hear what you'd use it for.
+
+{sender}
+"""
+default = """
+Hi {first_name}, I'm building {product} in the open. If it sounds useful, I'd love your feedback.
+
+{sender}
+"""

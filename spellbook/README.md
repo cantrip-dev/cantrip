@@ -10,6 +10,7 @@ Copy a spell, change the TOML, and you have your own. Spells never send anything
 
 | Spell | Signal in | Out |
 | --- | --- | --- |
-| [stargazers-to-leads](stargazers-to-leads/) | GitHub stars, or an event guest list (CSV) | scored leads with a drafted first note, as CSV |
+| [attendees-to-leads](attendees-to-leads/) | an event guest list (CSV) | attendees sorted by fit, with follow-up drafts |
+| [github-to-leads](github-to-leads/) | GitHub search, logins, contributors or stargazers | developers scored on their profile, with first-note drafts |
 
 Ideas for the next spells live in the issues. Pick one up, or propose your own.

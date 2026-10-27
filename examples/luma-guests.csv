@@ -1,4 +1,6 @@
-name,email,What company do you work for?,What is your role?
-Ada Example,ada@example.com,Example Labs,Head of Developer Relations
-Grace Sample,,Sample AI,Founder & CTO
-Linus Placeholder,linus@example.org,,Student
+name,first_name,last_name,email,approval_status,checked_in_at,What company do you work for?,What is your job title?,LinkedIn profile URL
+Ada Example,Ada,Example,ada@examplelabs.dev,approved,2026-02-26T17:42:00Z,Example Labs,Head of Developer Relations,https://www.linkedin.com/in/ada-example
+Grace Sample,Grace,Sample,grace.sample@gmail.com,approved,,Sample AI,Co-founder & CTO,https://www.linkedin.com/in/grace-sample
+Linus Placeholder,Linus,Placeholder,linus@example.org,approved,2026-02-26T18:05:00Z,,Student,
+Ming Demo,Ming,Demo,ming@examplelabs.dev,approved,2026-02-26T17:55:00Z,Example Labs,Senior Software Engineer,https://www.linkedin.com/in/ming-demo
+Ada Example,Ada,Example,ada@examplelabs.dev,approved,,Example Labs,Head of Developer Relations,

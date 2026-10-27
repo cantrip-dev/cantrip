@@ -1,7 +1,7 @@
 """Draft a first note for each lead. Drafts only: Cantrip never sends.
 
 v0.1 fills a template you control. Point an agent at the spell's SPELL.md to
-have it rewrite each draft with its own research instead.
+have it rewrite each draft around what it learns about the person instead.
 """
 
 from __future__ import annotations
@@ -12,18 +12,24 @@ from typing import Any
 from cantrip.lead import Lead
 
 SIGNAL_PHRASES = {
-    "starred": "starred {repo}",
     "registered": "signed up for {event}",
     "attended": "came to {event}",
+    "contributed": "contributed to {origin}",
+    "starred": "starred {origin}",
+    "found": "work on {topic}",
 }
 
 
 def _context(lead: Lead, spell: dict[str, Any]) -> dict[str, str]:
     origin = lead.source.split(":", 1)[-1]
-    phrase = SIGNAL_PHRASES.get(lead.signal, "{repo}").format(repo=origin, event=spell.get("event_name") or origin)
+    phrase = SIGNAL_PHRASES.get(lead.signal, "{origin}").format(
+        origin=origin, event=spell.get("event_name") or "the event",
+        topic=", ".join(lead.top_languages[:2]) or "open source")
     return {
         "first_name": lead.first_name,
         "company": lead.company or "your team",
+        "title": lead.title or "your work",
+        "event": spell.get("event_name") or "the event",
         "signal": phrase,
         "reason": lead.reasons[0] if lead.reasons else "",
         "sender": spell.get("sender", ""),
@@ -33,7 +39,8 @@ def _context(lead: Lead, spell: dict[str, Any]) -> dict[str, str]:
 
 
 def draft(lead: Lead, spell: dict[str, Any]) -> Lead:
-    template = spell.get("templates", {}).get(lead.tier) or spell.get("templates", {}).get("default", "")
+    templates = spell.get("templates", {})
+    template = templates.get(lead.tier) or templates.get("default", "")
     ctx = _context(lead, spell)
     unknown = {f for _, f, _, _ in Formatter().parse(template) if f} - ctx.keys()
     if unknown:

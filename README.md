@@ -5,11 +5,11 @@
 <h1 align="center">Cantrip</h1>
 
 <p align="center"><b>Go-to-market, cast at will.</b><br>
-Open-source spells that turn developer signals into scored leads and drafted outreach.</p>
+Open-source spells that turn event attendees and GitHub profiles into sorted leads and drafted outreach.</p>
 
 ---
 
-Devtool and AI teams sell to developers, but their best signals are scattered: GitHub stars, event guest lists, Discord, Reddit, talks. Cantrip reads those signals, scores each person against who you actually sell to, and drafts a first note you can review. It works with the tools you already have, and it never sends anything on its own.
+Devtool and AI teams sell to developers, and their best leads are people who already showed up: at an event, in a repo, on GitHub. Cantrip takes those people, scores each one against who you actually sell to, sorts them best-first, and drafts a first note you can review. It works with the tools you already have, and it never sends anything on its own.
 
 Each workflow is a **spell**: a small folder with the rules in TOML and the steps written out so an AI agent can run them too.
 
@@ -17,43 +17,49 @@ Each workflow is a **spell**: a small folder with the rules in TOML and the step
 
 ```bash
 pip install git+https://github.com/cantrip-dev/cantrip
-export GITHUB_TOKEN=...   # needed for --repo: GitHub only lists stargazers to signed-in requests
 
-# People who starred a repo
-cantrip cast stargazers-to-leads --repo your-org/your-repo --limit 200 --out leads.csv
+# An event guest list (a Luma export or any CSV with name, email, company, title, LinkedIn)
+cantrip cast attendees-to-leads --csv examples/luma-guests.csv --event "Open Source AI Day" --out leads.csv
 
-# People from an event guest list (a Luma CSV export works as-is)
-cantrip cast stargazers-to-leads --csv examples/luma-guests.csv --event "Open Source AI Day" --out leads.csv
+# Developers found by their GitHub profile
+export GITHUB_TOKEN=...   # optional: 5,000 requests an hour instead of 60
+cantrip cast github-to-leads --search '"developer advocate" in:bio followers:>100' --limit 50 --out leads.csv
 ```
 
 ```
-3 leads -> leads.csv  (hot 0, warm 2, cold 1)
+4 leads -> leads.csv, best first
+hot 1, warm 2, cold 1
+Companies with several good-fit people: Example Labs (2)
+Top leads:
+   80  Ada Example, Head of Developer Relations at Example Labs
 Nothing was sent. Review the drafts, then send the ones you like yourself.
 ```
 
 Each row of `leads.csv` has the person, a score from 0 to 100, a tier (hot, warm or cold), **the reasons for the score**, and a drafted note.
 
-## Make it yours
-
-Copy [`spellbook/stargazers-to-leads/spell.toml`](spellbook/stargazers-to-leads/spell.toml) and edit:
-
-- `[icp]`: the companies, roles, topics and languages you sell to, and who to skip
-- `[icp.weights]`: how much each signal counts
-- `[templates]`: the first note for each tier
-
-Then run `cantrip cast path/to/your-spell --repo ...`.
-
 ## The spellbook
 
 | Spell | Signal in | Out |
 | --- | --- | --- |
-| [stargazers-to-leads](spellbook/stargazers-to-leads/) | GitHub stars, or an event guest list | scored leads with a drafted first note (CSV) |
+| [attendees-to-leads](spellbook/attendees-to-leads/) | an event guest list: name, email, company, job title, LinkedIn | attendees sorted by seniority, role and fit, with follow-up drafts |
+| [github-to-leads](spellbook/github-to-leads/) | a GitHub user search, a list of logins, a repo's contributors or stargazers | developers scored on their public profile, with first-note drafts |
 
 Coming next: Discord and Reddit sources, and Twenty and HubSpot outputs. Ideas and pull requests are welcome.
 
+## Make it yours
+
+Copy a spell's `spell.toml` and edit:
+
+- `[icp]`: your target companies, topics and languages, who to deprioritize and who to skip
+- `[[icp.seniority]]` and `[[icp.functions]]`: which titles and roles count, and how much
+- `[icp.weights]`: how much each other signal counts
+- `[templates]`: the first note for each tier
+
+Then run `cantrip cast path/to/your-spell --csv ...`.
+
 ## Built for agents
 
-Every spell has a `SPELL.md`, the same workflow written as steps an agent can follow: run the CLI, shortlist the best leads, read their public work, rewrite each note around one true, specific detail, and hand the drafts back to a human. Point your agent at the file and say "cast this spell".
+Every spell has a `SPELL.md`, the same workflow written as steps an agent can follow: run the CLI, check the scoring, shortlist the best leads, read their public work, rewrite each note around one true, specific detail, and hand the drafts back to a human. Point your agent at the file and say "cast this spell".
 
 ## Principles
 

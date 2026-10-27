@@ -1,0 +1,3 @@
+# GitHub logins or profile URLs, one per line
+octocat
+https://github.com/torvalds

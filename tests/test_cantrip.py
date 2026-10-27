@@ -5,46 +5,59 @@ from cantrip.cli import main
 from cantrip.draft import draft
 from cantrip.lead import Lead
 from cantrip.score import score
-from cantrip.sources import csv_file
+from cantrip.sources import csv_file, github
 
 ROOT = Path(__file__).resolve().parent.parent
-CONFIG = spell.load("stargazers-to-leads")
+ATTENDEES = spell.load("attendees-to-leads")
+GITHUB = spell.load("github-to-leads")
+GUESTS = ROOT / "examples" / "luma-guests.csv"
 
 
-def test_csv_source_reads_luma_style_columns():
-    leads = list(csv_file.people(ROOT / "examples" / "luma-guests.csv"))
-    assert [lead.name for lead in leads] == ["Ada Example", "Grace Sample", "Linus Placeholder"]
-    assert leads[0].company == "Example Labs"
-    assert leads[1].title == "Founder & CTO"
+def test_csv_reads_luma_export_with_custom_questions():
+    leads = list(csv_file.people(GUESTS))
+    ada = leads[0]
+    assert (ada.name, ada.company, ada.title) == ("Ada Example", "Example Labs", "Head of Developer Relations")
+    assert ada.linkedin.endswith("/ada-example")
+    assert ada.signal == "attended" and leads[1].signal == "registered"
 
 
-def test_score_gives_reasons_and_tiers():
-    lead = score(Lead(name="Ada", company="Example Labs", title="Head of DevRel", email="a@x.io"), CONFIG["icp"])
-    assert lead.tier in {"hot", "warm"}
-    assert any("role" in r for r in lead.reasons)
+def test_attendee_scoring_sorts_by_seniority_function_and_email():
+    ada, grace, linus, ming = (score(lead, ATTENDEES["icp"]) for lead in list(csv_file.people(GUESTS))[:4])
+    assert ada.tier == "hot" and "role: developer relations" in ada.reasons
+    assert "senior: founder" in grace.reasons and "work email" not in grace.reasons
+    assert linus.tier == "cold" and any("student" in r for r in linus.reasons)
+    assert ada.score > ming.score > linus.score
 
 
 def test_keywords_match_whole_words_only():
-    lead = score(Lead(name="Sam", bio="Maintainer of a mail client"), CONFIG["icp"])
+    lead = score(Lead(name="Sam", bio="Maintainer of a mail client"), GITHUB["icp"])
     assert not any("mentions" in r for r in lead.reasons)
 
 
 def test_target_company_and_exclude():
-    icp = dict(CONFIG["icp"], target_companies=["Snowflake"], exclude=["rival.com"])
-    assert "Snowflake is on the target list" in score(Lead(company="Snowflake"), icp).reasons
+    icp = dict(ATTENDEES["icp"], target_companies=["Snowflake"], exclude=["rival.com"])
+    assert "Snowflake is on your target list" in score(Lead(email="a@snowflake.com"), icp).reasons
     assert score(Lead(company="Rival", email="x@rival.com", title="CTO"), icp).score == 0
 
 
-def test_draft_fills_template_without_placeholders_left():
-    lead = draft(score(Lead(name="Grace Sample", company="Sample AI", title="Founder", source="csv:guests",
-                            signal="registered"), CONFIG["icp"]), dict(CONFIG, sender="Yu", event_name="AI Day"))
-    assert lead.draft.startswith("Hi Grace")
-    assert "AI Day" in lead.draft and "{" not in lead.draft
+def test_github_login_from_url_or_handle():
+    assert github.login_from("https://github.com/octocat/") == "octocat"
+    assert github.login_from("@octocat") == "octocat"
 
 
-def test_cli_end_to_end(tmp_path, capsys):
+def test_github_profile_scoring():
+    lead = Lead(github="dev", company="Agentco", bio="Founder. Building AI agents", followers=900,
+                top_languages=["Python", "Shell"], signal="contributed", source="github-contributors:a/b")
+    lead = draft(score(lead, GITHUB["icp"]), dict(GITHUB, sender="Yu"))
+    assert lead.tier == "hot"
+    assert "codes in Python" in lead.reasons and "900 GitHub followers" in lead.reasons
+    assert "contributed to a/b" in lead.draft and "{" not in lead.draft
+
+
+def test_cli_end_to_end_merges_duplicates(tmp_path, capsys):
     out = tmp_path / "leads.csv"
-    assert main(["cast", "stargazers-to-leads", "--csv", str(ROOT / "examples" / "luma-guests.csv"),
-                 "--event", "AI Day", "--out", str(out)]) == 0
-    assert "Nothing was sent" in capsys.readouterr().out
-    assert out.read_text().count("\n") > 3
+    assert main(["cast", "attendees-to-leads", "--csv", str(GUESTS), "--event", "AI Day", "--out", str(out)]) == 0
+    printed = capsys.readouterr().out
+    assert "4 leads" in printed and "Nothing was sent" in printed
+    assert "Example Labs (2)" in printed
+    assert "Thanks for joining us at AI Day" in out.read_text()

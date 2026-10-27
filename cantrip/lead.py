@@ -4,21 +4,27 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
+PERSONAL_EMAIL_DOMAINS = {
+    "gmail.com", "googlemail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com",
+    "icloud.com", "me.com", "aol.com", "proton.me", "protonmail.com", "qq.com", "163.com",
+}
+
 
 @dataclass
 class Lead:
     # Who they are
     name: str = ""
-    handle: str = ""  # GitHub login, Luma handle, Discord name...
     email: str = ""
     company: str = ""
     title: str = ""
+    linkedin: str = ""
+    github: str = ""
     location: str = ""
     bio: str = ""
     website: str = ""
     # Where they came from
-    source: str = ""  # e.g. "github-stars:cantrip-dev/cantrip", "luma:open-source-ai-day"
-    signal: str = ""  # the action itself: "starred", "registered", "attended"
+    source: str = ""  # e.g. "github-search:language:python", "csv:open-source-ai-day"
+    signal: str = ""  # the action itself: "registered", "attended", "contributed", "starred", "found"
     # What GitHub says about them, when we know their login
     followers: int = 0
     public_repos: int = 0
@@ -37,4 +43,18 @@ class Lead:
 
     @property
     def first_name(self) -> str:
-        return (self.name or self.handle).split()[0] if (self.name or self.handle) else "there"
+        who = self.name or self.github
+        return who.split()[0] if who else "there"
+
+    @property
+    def email_domain(self) -> str:
+        return self.email.rsplit("@", 1)[-1].lower() if "@" in self.email else ""
+
+    @property
+    def has_work_email(self) -> bool:
+        return bool(self.email_domain) and self.email_domain not in PERSONAL_EMAIL_DOMAINS
+
+    @property
+    def key(self) -> str:
+        """What makes two rows the same person, for de-duplication."""
+        return (self.email or self.linkedin.rstrip("/") or self.github or self.name).lower()
