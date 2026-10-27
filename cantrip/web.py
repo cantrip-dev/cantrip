@@ -57,6 +57,7 @@ class Search:
     searches: int = 0
     pages: int = 0
     skipped: int = 0  # pages that couldn't be read (blocked, empty or script-only)
+    empty: int = 0  # searches that came back with nothing
     errors: list[str] = field(default_factory=list)
 
     @classmethod
@@ -68,6 +69,15 @@ class Search:
                    category=os.environ.get("CANTRIP_SEARCH_CATEGORY", "").lower(),
                    reader_key=tinyfish or (key if provider == "tinyfish" else ""))
 
+    def warning(self) -> str:
+        """A plain warning when searches came back empty, so a run never fails silently."""
+        if not self.searches or self.empty < max(2, self.searches // 2):
+            return ""
+        why = next((e for e in reversed(self.errors) if e.startswith("SearXNG")), "")
+        return (f"{self.empty} of {self.searches} searches found nothing. "
+                + (why + ". They often block busy or cloud servers for a while: wait an hour, or use another "
+                   "search service." if why else "Check your search service with `cantrip search`."))
+
     @property
     def ready(self) -> bool:
         return self.provider in PROVIDERS and bool(self.url if self.provider == "searxng" else self.key)
@@ -75,7 +85,17 @@ class Search:
     def search(self, query: str, count: int = 5) -> list[Result]:
         self.searches += 1
         try:
-            return getattr(self, f"_{self.provider}")(query, count)[:count]
+            try:
+                found = getattr(self, f"_{self.provider}")(query, count)[:count]
+            except TimeoutError:  # one slow answer shouldn't lose the whole run: retry once, then skip it
+                try:
+                    found = getattr(self, f"_{self.provider}")(query, count)[:count]
+                except TimeoutError:
+                    self.errors.append(f"{self.provider} timed out on '{query}', skipped")
+                    found = []
+            if not found:
+                self.empty += 1
+            return found
         except urllib.error.HTTPError as err:
             if self.provider == "searxng" and err.code == 403:
                 raise SearchError("SearXNG refused JSON results. Add json under search > formats in its settings.yml "
@@ -128,6 +148,9 @@ class Search:
     def _searxng(self, query: str, count: int) -> list[Result]:
         q = urllib.parse.urlencode({"q": query, "format": "json"})
         data = json.loads(_request(f"{self.url.rstrip('/')}/search?{q}"))
+        blocked = [f"{name} ({why})" for name, why in data.get("unresponsive_engines") or []]
+        if not data.get("results") and blocked:
+            self.errors.append("SearXNG's search engines aren't answering: " + ", ".join(blocked))
         return [Result(r["url"], r.get("title", ""), r.get("content", "")) for r in data.get("results", [])]
 
     def read(self, result: Result, max_chars: int = 12000) -> str:

@@ -228,3 +228,25 @@ def test_old_news_is_not_a_why_now():
     assert not web_source._stale("closed a $44 million seed round on Sept. 1, 2026", today)
     assert not web_source._stale("joins Every as head of growth", today)
     assert web_source._stale("Posted March 3, 2023. Union.ai today announced its Series A", today)
+    assert web_source._stale("Entire hit the ground running in February backed by a $60 million seed round", today)
+    assert not web_source._stale("closed its seed round in September", today)
+
+
+def test_empty_searches_warn(monkeypatch):
+    from cantrip import web
+    monkeypatch.setattr(web, "_request", lambda *a, **k: json.dumps(
+        {"results": [], "unresponsive_engines": [["brave", "Suspended: too many requests"]]}).encode())
+    sx = web.Search(provider="searxng", url="http://localhost:8888")
+    for _ in range(3):
+        sx.search("x")
+    assert "3 of 3 searches found nothing" in sx.warning() and "brave (Suspended" in sx.warning()
+
+
+def test_a_slow_search_is_skipped_not_fatal(monkeypatch):
+    from cantrip import web
+
+    def slow(*a, **k):
+        raise TimeoutError("The read operation timed out")
+    monkeypatch.setattr(web, "_request", slow)
+    s = web.Search(provider="serper", key="k")
+    assert s.search("x") == [] and s.empty == 1 and "timed out" in s.errors[-1]

@@ -137,6 +137,8 @@ def cast(args: argparse.Namespace) -> int:
         print(f"Used {ai.calls} AI calls" + (f" ({ai.tokens:,} tokens)" if ai.tokens else "")
               + (f" and {search.searches} searches" if search else "")
               + (f"; {search.skipped} pages couldn't be read" if search and search.skipped else "") + ".")
+    if search is not None and search.warning():
+        print("Warning: " + search.warning(), file=sys.stderr)
     print("Nothing was sent. Review the drafts, then send the ones you like yourself.")
     return 0
 

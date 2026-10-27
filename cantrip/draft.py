@@ -49,6 +49,9 @@ def _context(lead: Lead, spell: dict[str, Any]) -> dict[str, str]:
 
 
 def draft(lead: Lead, spell: dict[str, Any]) -> Lead:
+    if not (lead.name or lead.github):
+        lead.draft = ""  # a company with nobody named: no one to write to yet
+        return lead
     templates = spell.get("templates", {})
     template = templates.get(lead.tier) or templates.get("default", "")
     ctx = _context(lead, spell)

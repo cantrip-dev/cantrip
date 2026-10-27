@@ -39,14 +39,17 @@ Rules:
 - List only people and companies the page itself names. Never invent anyone or anything; if the page doesn't
   state a title, company or stage, leave it empty.
 - List only people the page presents in a role of their own at a company that plausibly fits the profile: a founder
-  or executive announced or quoted about their own company, an author writing about their own work, a new hire
-  announced. Skip people mentioned in passing, people in lists of many people or companies (roundups, rankings,
+  or executive announced, quoted or named on their own company's page or job post, an author writing about their
+  own work, a new hire announced. Skip people mentioned in passing, people in lists of many people or companies (roundups, rankings,
   investor lists, speaker grids), journalists, investors and commenters.
 - If the profile lists company stages, skip people at large, established or public companies.
 - "evidence": a short exact quote from the page (under 200 characters) showing who they are and why they fit.
 - "why_now": a short exact quote from the page showing one of the profile's why_now signals for this person or
   their company (e.g. a round just raised, a first sales or growth hire, a launch). Leave it empty unless the page
   really says so; don't stretch an unrelated detail into a signal.
+- A company's own job post for a role that is one of the profile's why_now signals (e.g. its first GTM or growth
+  hire) is a why_now for that company, and for the founders or executives the post names: list them with it.
+- Ignore the site's own banners, footers and ads (e.g. a forum's "applications are open" notice).
 - "stage": the company's stage or size only as the page states it (e.g. "seed", "Series A", "public company").
 - A company with no named person: list it only with a why_now quote. Leave name and title empty.
 - At most 5 leads per page."""
@@ -127,11 +130,16 @@ def _stale(quote: str, today: date | None = None) -> bool:
     found = []
     for month, year in re.findall(r"(?:\b([A-Za-z]{3})[a-z]*\.?\s+(?:\d{1,2},?\s+)?)?\b(20\d\d)\b", quote):
         found.append(date(int(year), MONTHS.get(month.lower(), 12), 1))
+    for month in re.findall(r"\b(January|February|March|April|June|July|August|September|October|November|December)\b"
+                            r"(?!,?\s+(?:\d{1,2},?\s+)?20\d\d)", quote):
+        number = MONTHS[month[:3].lower()]  # a month with no year: the most recent one
+        found.append(date(today.year if number <= today.month else today.year - 1, number, 1))
     return bool(found) and (today - max(found)).days > 183
 
 
 def _dated(quote: str) -> bool:
-    return bool(re.search(r"\b20\d\d\b", quote))
+    return bool(re.search(r"\b20\d\d\b|\b(January|February|March|April|June|July|August|September|October|"
+                          r"November|December)\b", quote))
 
 
 def _quote(value: Any, page: str) -> str:

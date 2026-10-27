@@ -206,6 +206,8 @@ class Handler(BaseHTTPRequestHandler):
                         os.environ["GITHUB_TOKEN"] = saved
         usage = (f"{ai.calls} AI calls" + (f", {search.searches} searches" if search else "")
                  + (f" ({search.skipped} pages couldn't be read)" if search and search.skipped else "")) if ai else ""
+        if search is not None and search.warning():
+            usage = (usage + ". " if usage else "") + "Warning: " + search.warning()
         Handler.last_results = results
         self._json({"leads": [lead.to_row() for lead in results], "summary": summary(results), "usage": usage})
 
