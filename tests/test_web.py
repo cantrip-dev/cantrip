@@ -130,3 +130,34 @@ def test_exa_and_tinyfish_requests(monkeypatch):
     hit = tf.search("devrel", 3)[0]
     assert "query=devrel" in seen[1][0] and seen[1][2]["X-API-Key"] == "k"
     assert tf.read(hit) == "page text from tinyfish"
+
+
+def test_tavily_and_searxng_requests(monkeypatch):
+    import io
+    import urllib.error
+
+    import pytest
+
+    from cantrip import web
+    seen = []
+
+    def fake(url, data=None, headers=None, timeout=30):
+        seen.append((url, data, headers))
+        if "tavily" in url:
+            return json.dumps({"results": [{"url": "https://t.dev", "title": "T", "content": "c",
+                                            "raw_content": "y" * 600}]}).encode()
+        if "nojson" in url:
+            raise urllib.error.HTTPError(url, 403, "Forbidden", {}, io.BytesIO(b""))
+        return json.dumps({"results": [{"url": "https://s.dev", "title": "S", "content": "snip"}]}).encode()
+    monkeypatch.setattr(web, "_request", fake)
+
+    tavily = web.Search(provider="tavily", key="tvly-k")
+    hit = tavily.search("devrel", 3)[0]
+    assert seen[0][2]["Authorization"] == "Bearer tvly-k" and seen[0][1]["include_raw_content"] is True
+    assert tavily.read(hit).startswith("y")  # Tavily returned the page, so nothing else is fetched
+
+    sx = web.Search(provider="searxng", url="http://localhost:8888/")
+    assert sx.ready and sx.search("devrel", 3)[0].url == "https://s.dev"
+    assert seen[1][0].startswith("http://localhost:8888/search?") and "format=json" in seen[1][0]
+    with pytest.raises(web.SearchError, match="formats"):
+        web.Search(provider="searxng", url="http://nojson").search("x")

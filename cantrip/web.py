@@ -77,10 +77,16 @@ class Search:
         try:
             return getattr(self, f"_{self.provider}")(query, count)[:count]
         except urllib.error.HTTPError as err:
-            raise SearchError(f"{self.provider} answered {err.code} for '{query}'"
-                              + (": check your search key" if err.code in (401, 403) else "")) from err
+            if self.provider == "searxng" and err.code == 403:
+                raise SearchError("SearXNG refused JSON results. Add json under search > formats in its settings.yml "
+                                  "(the one in Cantrip's searxng folder already has it), then restart it.") from err
+            hint = {401: ": check your search key", 403: ": check your search key", 429: ": you've hit the "
+                    "service's rate limit or used up its free allowance", 432: ": Tavily's monthly free credits are "
+                    "used up"}.get(err.code, "")
+            raise SearchError(f"{self.provider} answered {err.code} for '{query}'{hint}") from err
         except urllib.error.URLError as err:
-            raise SearchError(f"Couldn't reach {self.provider}: {err.reason}") from err
+            where = f" at {self.url}. Is it running? (cd searxng && docker compose up -d)" if self.provider == "searxng" else ""
+            raise SearchError(f"Couldn't reach {self.provider}{where}: {err.reason}") from err
 
     def _tinyfish(self, query: str, count: int) -> list[Result]:
         q = urllib.parse.urlencode({"query": query})

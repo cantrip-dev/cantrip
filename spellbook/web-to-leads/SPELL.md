@@ -23,12 +23,14 @@ Which search service? All have a free way in; check each one's pricing page, as 
 
 | Service | Free | Good for |
 | --- | --- | --- |
-| SearXNG | free and open source, you host it | no key, no limits, no account |
+| SearXNG | free and open source, you host it: [one command with Docker](../../searxng/) | no key, no limits, no account |
 | TinyFish | free within rate limits | search plus a page reader that copes with script-heavy sites |
 | Exa | a monthly free credit | people and company search (`CANTRIP_SEARCH_CATEGORY=people`): finds profiles by role |
-| Tavily | a monthly free allowance | returns page text with results, so fewer pages to fetch |
+| Tavily | 1,000 credits a month free (a search is 1 credit); key at app.tavily.com | returns page text with results, so fewer pages to fetch |
 | Serper, SerpAPI | a free allowance | Google results |
 | Brave | a small monthly credit, card required | an independent index |
+
+Check your search service before a full run with `cantrip search "a test query"`: it runs one search and shows what came back.
 
 With Exa's `people` index, results can be LinkedIn profile pages. Cantrip keeps those (Exa returns their text, so nothing is scraped) and each lead still has to be named on the page it came from.
 

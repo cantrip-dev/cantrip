@@ -71,7 +71,7 @@ This opens Cantrip in your browser. Fill in your profile, drop in an attendee CS
 - **Python 3.11 or newer.** Nothing else: no packages to install, no database, no account.
 - **Files in, files out.** People come in as a CSV or from GitHub's public API; leads go out as a CSV, and to your CRM if you like. Your profile is one small text file (`cantrip.toml`).
 - **Internet** only for the GitHub spell, which reads public GitHub profiles. A GitHub token is optional (5,000 lookups an hour instead of 60), except for stargazers, where GitHub requires one.
-- **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and TinyFish, Exa, Tavily, Brave, Serper, SerpAPI or a self-hosted SearXNG. See [web-to-leads](spellbook/web-to-leads/SPELL.md).
+- **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and TinyFish, Exa, Tavily, Brave, Serper, SerpAPI or SearXNG, which is free and runs on your own computer ([one command with Docker](searxng/)). `cantrip search "a test query"` checks your search service works. See [web-to-leads](spellbook/web-to-leads/SPELL.md).
 
 ## Your product, your ICP
 

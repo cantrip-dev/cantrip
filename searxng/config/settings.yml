@@ -1,0 +1,14 @@
+# SearXNG settings for Cantrip: the defaults, plus the JSON answers Cantrip reads.
+# Docs: https://docs.searxng.org/admin/settings/
+use_default_settings: true
+
+general:
+  instance_name: "Cantrip search"
+
+search:
+  formats: [html, json]   # Cantrip asks for JSON; SearXNG turns it off unless listed here
+
+server:
+  secret_key: "change-me"  # replaced by SEARXNG_SECRET from the .env file
+  limiter: false           # it only runs on your computer, so no bot limiter needed
+  image_proxy: false

@@ -8,6 +8,7 @@
     cantrip cast github-to-leads --contributors owner/repo
     cantrip cast web-to-leads --web "AI startups hiring their first DevRel"   # needs an AI model and a search key
     cantrip cast attendees-to-leads --csv guests.csv --research               # research the best leads on the web
+    cantrip search "devrel leads at AI startups"                             # check your search service works
     cantrip cast attendees-to-leads --csv guests.csv --to notion              # also add them to Notion (or hubspot, twenty, espocrm)
 """
 
@@ -157,6 +158,22 @@ def init(args: argparse.Namespace) -> int:
     return 0
 
 
+def search_check(args: argparse.Namespace) -> int:
+    search = Search.from_env()
+    if not search.ready:
+        print(_check_ai(AI(key="x"), search) or "Set CANTRIP_SEARCH first.", file=sys.stderr)
+        return 2
+    try:
+        results = search.search(args.query, args.count)
+    except SearchError as err:
+        print(err, file=sys.stderr)
+        return 1
+    print(f"{search.provider} works: {len(results)} results for '{args.query}'")
+    for r in results:
+        print(f"  {r.title[:70] or '(no title)'}\n    {r.url}" + ("  [page text included]" if len(r.content) > 500 else ""))
+    return 0
+
+
 def ui(args: argparse.Namespace) -> int:
     from cantrip.ui.server import serve
 
@@ -193,6 +210,11 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("--profile", help="profile to use and save (default ./cantrip.toml)")
     u.add_argument("--no-browser", action="store_true", help="don't open a browser tab")
     u.set_defaults(func=ui)
+
+    q = sub.add_parser("search", help="check your search service: run one search and show the results")
+    q.add_argument("query", nargs="?", default="developer relations lead at an AI startup")
+    q.add_argument("--count", type=int, default=5)
+    q.set_defaults(func=search_check)
 
     p = sub.add_parser("cast", help="run a spell from the spellbook")
     p.add_argument("spell", help="spell name (e.g. attendees-to-leads) or path to its folder")
