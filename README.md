@@ -15,21 +15,27 @@ Each workflow is a **spell**: a small, product-neutral folder with its scoring r
 
 ## Quick start
 
-Cantrip needs Python 3.11 or newer and nothing else: no packages, no install step. Check with `python3 --version`. On a Mac, the built-in `python3` is 3.9, so install a newer one first (`brew install python@3.12`) and use `python3.12` below.
+Cantrip needs Python 3.11 or newer and nothing else: no packages to install. Check with `python3 --version`. On a Mac, the built-in `python3` is 3.9, so install a newer one first (`brew install python@3.12`).
 
 ```bash
 git clone https://github.com/cantrip-dev/cantrip.git && cd cantrip
+./install.sh      # adds a `cantrip` command; nothing is downloaded
+cantrip           # opens the app in your browser
+```
 
-# Open the app in your browser
-python3 -m cantrip ui
+The app walks you through it: describe what you sell and who buys it, drop in an attendee CSV or type a GitHub search, and press **Cast it**. See [the app](#the-app).
 
-# Or use the command line
+On Windows, skip `install.sh` and type `cantrip` inside the folder (`.\cantrip` in PowerShell), which runs `cantrip.cmd`; Windows support is new, so tell us if it breaks. Without the setup step, `python3 -m cantrip` works the same from the folder.
+
+### From the command line
+
+```bash
 # 1. Tell Cantrip what you sell and who buys it (a few questions, saved to cantrip.toml)
-python3 -m cantrip init
+cantrip init
 
 # 2. Cast a spell on people who showed interest
-python3 -m cantrip cast attendees-to-leads --csv guests.csv --event "AI Builders Day" --out leads.csv
-python3 -m cantrip cast github-to-leads --search '"developer advocate" in:bio followers:>100' --limit 50 --out leads.csv
+cantrip cast attendees-to-leads --csv guests.csv --event "AI Builders Day" --out leads.csv
+cantrip cast github-to-leads --search '"developer advocate" in:bio followers:>100' --limit 50 --out leads.csv
 ```
 
 ```
@@ -41,8 +47,6 @@ Top leads:
    70  Grace Sample, Co-founder & CTO at Sample AI
 Nothing was sent. Review the drafts, then send the ones you like yourself.
 ```
-
-Want a plain `cantrip` command that works from any folder? Install it once with `pipx install git+https://github.com/cantrip-dev/cantrip.git` (or `pip install -e .` inside the repo). The rest of this page writes `cantrip`; without installing, type `python3 -m cantrip` from the repo folder instead.
 
 Each row of `leads.csv` has the person, a score from 0 to 100, a tier (hot, warm or cold), **the reasons for the score**, and a drafted note.
 
@@ -60,10 +64,10 @@ Add `--to notion` (or `hubspot`, `twenty`, `espocrm`) to any spell to put the ho
 
 Coming next: Discord and Reddit sources. Ideas and pull requests are welcome.
 
-## Prefer clicking? Use the app
+## The app
 
 ```bash
-cantrip ui
+cantrip           # or: cantrip ui --port 8800
 ```
 
 This opens Cantrip in your browser. Fill in your profile, drop in an attendee CSV or type a GitHub search, and press **Cast it**. You get your leads best-first, can filter by tier, read and copy each draft, and download the CSV. The app runs only on your own computer (127.0.0.1) and saves nothing but your profile.
@@ -72,7 +76,7 @@ This opens Cantrip in your browser. Fill in your profile, drop in an attendee CS
 
 ## What it needs
 
-- **Python 3.11 or newer.** Nothing else: no packages, no install step, no database, no account.
+- **Python 3.11 or newer.** Nothing else: no packages, no database, no account.
 - **Files in, files out.** People come in as a CSV or from GitHub's public API; leads go out as a CSV, and to your CRM if you like. Your profile is one small text file (`cantrip.toml`).
 - **Internet** only for the GitHub spell, which reads public GitHub profiles. A GitHub token is optional (5,000 lookups an hour instead of 60), except for stargazers, where GitHub requires one.
 - **AI is optional.** The attendee and GitHub spells use plain rules and templates you can read. Web search, research mode and AI-written drafts need an AI model and a search service, with your own keys: OpenAI or any OpenAI-compatible API (including a free local model through Ollama) or Anthropic, and TinyFish, Exa, Tavily, Brave, Serper, SerpAPI or SearXNG, which is free and runs on your own computer ([one command with Docker](searxng/)). `cantrip search "a test query"` checks your search service works. Exa and Tavily support is in beta: not yet tried against the live services. See [web-to-leads](spellbook/web-to-leads/SPELL.md).

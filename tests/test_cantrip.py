@@ -114,3 +114,12 @@ def test_cli_end_to_end_merges_duplicates(tmp_path, capsys):
     assert "4 leads" in printed and "Nothing was sent" in printed
     assert "Example Labs (2)" in printed
     assert "Thanks for being part of AI Day" in out.read_text()
+
+
+def test_plain_cantrip_opens_the_app(monkeypatch):
+    from cantrip.ui import server
+
+    seen = {}
+    monkeypatch.setattr(server, "serve", lambda **kw: seen.update(kw))
+    assert main([]) == 0
+    assert seen["port"] == 8765 and seen["open_browser"] is True

@@ -20,6 +20,10 @@ jobs:
           python -m cantrip cast attendees-to-leads --csv examples/luma-guests.csv \
             --profile examples/profiles/devtool-startup.toml --out /tmp/no-install.csv
           test -s /tmp/no-install.csv
+      - name: install.sh adds a working cantrip command
+        run: |
+          CANTRIP_BIN_DIR=/tmp/cbin sh install.sh
+          cd /tmp && /tmp/cbin/cantrip --version
       - run: pip install -e ".[dev]"
       - run: pytest -q
       - name: Installed copy works outside the repo

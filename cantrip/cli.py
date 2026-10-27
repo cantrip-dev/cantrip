@@ -1,6 +1,6 @@
 """cantrip: turn people who showed interest into a sorted list of leads with drafted notes.
 
-    cantrip ui                        # the same, in your browser
+    cantrip                           # open the app in your browser (same as `cantrip ui`)
     cantrip init                      # describe what you sell and who you sell to
     cantrip cast attendees-to-leads --csv guests.csv --event "Open Source AI Day"
     cantrip cast github-to-leads --search "agents language:python location:seattle"
@@ -226,7 +226,7 @@ def ui(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="cantrip", description="Go-to-market, cast at will.")
     parser.add_argument("--version", action="version", version=f"cantrip {__version__}")
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command")
 
     i = sub.add_parser("init", help="describe what you sell and who you sell to (writes cantrip.toml)",
                        description="Asks a few questions, or takes them as flags (lists are comma-separated).")
@@ -300,6 +300,8 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=cast)
 
     args = parser.parse_args(argv)
+    if args.command is None:  # plain `cantrip` opens the app
+        args = parser.parse_args(["ui"])
     return args.func(args)
 
 
