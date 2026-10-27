@@ -2,7 +2,8 @@
 
 Thanks for helping! The fastest ways in:
 
-- **Write a spell.** Copy `spellbook/attendees-to-leads/`, change it for a new signal (Discord joins, Reddit threads, docs visits...) and open a pull request.
+- **Write a spell.** Copy `spellbook/attendees-to-leads/`, change it for a new signal (Discord joins, Reddit threads, docs visits...) and open a pull request. Keep spells product-neutral: anything about what the user sells belongs in their profile, not the spell.
+- **Add an example profile** to `examples/profiles/` for a kind of business we don't cover yet.
 - **Add a source or a sink.** Sources live in `cantrip/sources/`, outputs in `cantrip/sinks/`. Twenty and HubSpot outputs are wanted.
 - **Report what didn't work** in an issue, with the command you ran.
 

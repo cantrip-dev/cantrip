@@ -1,0 +1,18 @@
+# Example: a community that runs developer events and sells sponsorships.
+
+[product]
+name = "sponsorships for AI Builders Day"
+pitch = "a full day in front of 500 AI builders, with talks, demos and an expo hall"
+ask = "a quick call to walk through the packages"
+sender = "Alex"
+event = "AI Builders Day"
+
+[icp]
+seniority = "high"
+buyer_roles = ["developer relations", "devrel", "developer advocate", "community", "developer marketing", "marketing", "partnerships", "events"]
+champion_roles = ["developer experience", "growth", "ecosystem", "product marketing"]
+target_companies = []
+keywords = ["ai", "llm", "agents", "open source", "devtools", "developer tools", "infra", "platform", "data"]
+languages = []
+deprioritize = ["student", "intern", "looking for", "job seeker", "between roles"]
+exclude = []

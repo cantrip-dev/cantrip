@@ -1,0 +1,17 @@
+# Example: a B2B SaaS company selling to revenue teams, not developers.
+
+[product]
+name = "Pipewise"
+pitch = "a forecasting tool that reads your CRM and flags deals at risk"
+ask = "a 20-minute demo"
+sender = "Jordan"
+
+[icp]
+seniority = "high"
+buyer_roles = ["revenue operations", "revops", "sales operations", "vp sales", "cro", "head of sales"]
+champion_roles = ["account executive", "sales manager", "sales"]
+target_companies = []
+keywords = ["saas", "b2b", "salesforce", "hubspot", "forecast", "pipeline"]
+languages = []
+deprioritize = ["student", "intern", "recruiter"]
+exclude = []

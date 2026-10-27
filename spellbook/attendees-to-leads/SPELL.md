@@ -3,6 +3,17 @@
 **Signal in:** an event guest list: a Luma export or any registration CSV with name, email, company, job title and LinkedIn.
 **Out:** the same people sorted best-first, each with a fit score, the reasons for it, and a drafted follow-up note. Nothing is sent.
 
+## Before the first run: the profile
+
+Every run scores against the person's profile, `cantrip.toml`. If there isn't one, interview them first, in one short message:
+
+1. What are you selling, and how would you describe it to a customer in one line?
+2. Who buys it, and who uses or champions it? (job roles)
+3. Any companies you most want, and anyone to skip (your own company, competitors)?
+4. What should a first note ask for, and how do you sign your name?
+
+Then save their answers with `cantrip init --name ... --pitch ... --buyer-roles ... --champion-roles ... --target-companies ... --exclude ... --ask ... --sender ...`. Fill in fit keywords (and, for GitHub, languages) from what they told you and show them the file. Never guess what they sell.
+
 ## Run it
 
 ```bash
@@ -15,19 +26,19 @@ Duplicate registrations (same email or LinkedIn URL) are merged. After the run y
 
 ## What it scores
 
-Set in `spell.toml`, every rule with its points:
+Who counts as a good fit comes from your profile. The spell adds the event-specific signals:
 
-- **Seniority** from the job title: founder or C-level, VP/head/director, lead/manager, senior
-- **Function:** DevRel and community first, then marketing, growth, partnerships and sales, then engineering and product. Change the order to match who buys from you.
-- **Your target companies,** matched on company name and email domain
+- **Role:** the profile's buyer roles count most, then its champion roles
+- **Seniority** from the job title (founder or C-level, VP/head/director, lead/manager, senior), scaled by the profile's `seniority` setting
+- **Your target companies,** matched on company name and email domain, and **fit keywords** in the title or company
 - **Attended** (checked in) rather than only registered
 - **Work email** rather than a personal one
-- **Lower priority** for students, interns and job seekers; **excluded** companies drop to zero
+- **Lower priority** for the profile's `deprioritize` words; **excluded** companies drop to zero
 
 ## For agents
 
 1. **Run it** on the list the person gives you.
-2. **Check the scoring.** Read the top 20 and a few from the middle. If a rule is clearly wrong for this person (they sell to engineers, not marketers), suggest the change to `spell.toml` and rerun. Don't change scores by hand.
+2. **Check the scoring.** Read the top 20 and a few from the middle. If the order looks wrong for what they sell, suggest a change to their profile (roles, keywords, seniority) and rerun. Don't change scores by hand.
 3. **Shortlist** the hot leads, then warm, up to the number the person asked for (default 20).
 4. **Research each one from public pages:** the company's site, its recent news, the person's public posts or talks. Open a LinkedIn URL only to read it if the person has a logged-in browser they let you use; never scrape LinkedIn.
 5. **Rewrite each draft** in under 90 words: one specific, true detail, why you're writing, one question. Never invent a conversation at the event, a result or a number.

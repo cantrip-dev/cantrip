@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cantrip"
 version = "0.1.0"
-description = "Go-to-market, cast at will: open-source spells that turn event attendees and GitHub profiles into sorted leads and drafted outreach."
+description = "Go-to-market, cast at will: tell it what you sell and who buys it, and open-source spells turn event attendees and GitHub profiles into sorted leads and drafted outreach."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"

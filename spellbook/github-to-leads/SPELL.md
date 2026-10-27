@@ -11,6 +11,17 @@
 
 **Out:** one row per person, filled in from their public profile (name, company, bio, location, website, followers, most-used languages), with a fit score, the reasons, and a drafted first note. Nothing is sent.
 
+## Before the first run: the profile
+
+Every run scores against the person's profile, `cantrip.toml`. If there isn't one, interview them first, in one short message:
+
+1. What are you selling, and how would you describe it to a customer in one line?
+2. Who buys it, and who uses or champions it? (job roles)
+3. Any companies you most want, and anyone to skip (your own company, competitors)?
+4. What should a first note ask for, and how do you sign your name?
+
+Then save their answers with `cantrip init --name ... --pitch ... --buyer-roles ... --champion-roles ... --target-companies ... --exclude ... --ask ... --sender ...`. Fill in fit keywords (and, for GitHub, languages) from what they told you and show them the file. Never guess what they sell.
+
 ## Run it
 
 ```bash
@@ -23,8 +34,8 @@ Each person costs two requests (profile and repos), so without a token keep `--l
 
 ## What it scores
 
-The same seniority and function rules as attendees-to-leads, read from the profile's company and bio, plus:
-- **Languages** they use most, against your list
+Your profile's buyer and champion roles, seniority, target companies and keywords, read from the GitHub profile's company and bio, plus:
+- **Languages** they use most, against your profile's `languages`
 - **Influence:** followers above `influencer_followers`
 - **Contributed** code, when the source is a repo's contributors
 - **Reachable:** a public email, website or blog
@@ -32,6 +43,6 @@ The same seniority and function rules as attendees-to-leads, read from the profi
 ## For agents
 
 1. **Pick the source** that matches the ask: a search for "find developers who...", contributors for "people who build on X", a list when the person already has handles.
-2. **Run it, then check the scoring** on the top 20. Suggest edits to `spell.toml` rather than changing scores by hand.
+2. **Run it, then check the scoring** on the top 20. Suggest edits to the person's profile rather than changing scores by hand.
 3. **Research the shortlist** on public pages only: pinned repos, recent commits, their site or blog. No LinkedIn scraping, no guessed private emails.
 4. **Rewrite each draft** in under 90 words around one real thing they built, then **hand the drafts back** for the person to approve and send.

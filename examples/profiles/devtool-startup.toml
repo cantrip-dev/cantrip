@@ -1,0 +1,17 @@
+# Example: a developer-tools startup selling a hosted product to engineering teams.
+
+[product]
+name = "Acme Vector"
+pitch = "a vector database that runs inside Postgres"
+ask = "a 15-minute call to see if it fits your stack"
+sender = "Sam"
+
+[icp]
+seniority = "normal"
+buyer_roles = ["head of engineering", "vp engineering", "cto", "platform", "infrastructure"]
+champion_roles = ["ml engineer", "ai engineer", "data engineer", "backend engineer", "engineer"]
+target_companies = []
+keywords = ["rag", "search", "embeddings", "llm", "ai", "postgres", "vector"]
+languages = ["Python", "TypeScript", "Go"]
+deprioritize = ["student", "intern", "learning"]
+exclude = ["acme.dev"]

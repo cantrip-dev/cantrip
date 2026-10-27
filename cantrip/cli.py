@@ -1,5 +1,6 @@
 """cantrip: turn people who showed interest into a sorted list of leads with drafted notes.
 
+    cantrip init                      # describe what you sell and who you sell to
     cantrip cast attendees-to-leads --csv guests.csv --event "Open Source AI Day"
     cantrip cast github-to-leads --search "agents language:python location:seattle"
     cantrip cast github-to-leads --users handles.txt
@@ -14,7 +15,7 @@ import urllib.error
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
-from cantrip import __version__, spell
+from cantrip import __version__, profile, spell
 from cantrip.draft import draft
 from cantrip.lead import Lead
 from cantrip.report import summary
@@ -48,7 +49,12 @@ def _unique(leads: Iterable[Lead]) -> Iterator[Lead]:
 
 
 def cast(args: argparse.Namespace) -> int:
-    config = spell.load(args.spell)
+    try:
+        mine = profile.load(args.profile)
+    except profile.ProfileMissing as err:
+        print(err, file=sys.stderr)
+        return 2
+    config = profile.apply(spell.load(args.spell), mine)
     if args.event:
         config["event_name"] = args.event
     leads = _source(args)
@@ -80,10 +86,47 @@ def cast(args: argparse.Namespace) -> int:
     return 0
 
 
+def init(args: argparse.Namespace) -> int:
+    answers = {key: getattr(args, key) for key, _, _ in profile.QUESTIONS if getattr(args, key, None)}
+    if args.event:
+        answers["event"] = args.event
+    path = Path(args.out)
+    if path.exists() and not args.force:
+        print(f"{path} already exists. Edit it, or pass --force to start over.", file=sys.stderr)
+        return 1
+    try:
+        written = profile.init(answers, path)
+    except ValueError as err:
+        print(err, file=sys.stderr)
+        return 2
+    print(f"Saved your profile to {written}. Every spell will now score leads against it.")
+    print("Next: cantrip cast attendees-to-leads --csv guests.csv   or   cantrip cast github-to-leads --search \"...\"")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="cantrip", description="Go-to-market, cast at will.")
     parser.add_argument("--version", action="version", version=f"cantrip {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    i = sub.add_parser("init", help="describe what you sell and who you sell to (writes cantrip.toml)",
+                       description="Asks a few questions, or takes them as flags (lists are comma-separated).")
+    i.add_argument("--name", help="what you sell: a product, service or offer")
+    i.add_argument("--pitch", help="one line describing it, as you'd say it to a customer")
+    i.add_argument("--buyer-roles", dest="buyer_roles", help="job roles that buy it")
+    i.add_argument("--champion-roles", dest="champion_roles", help="job roles that use or champion it")
+    i.add_argument("--seniority", choices=list(profile.SENIORITY_SCALE), help="how much seniority matters")
+    i.add_argument("--target-companies", dest="target_companies", help="companies you most want")
+    i.add_argument("--keywords", help="words in a title, bio or company that signal a good fit")
+    i.add_argument("--languages", help="programming languages your users write")
+    i.add_argument("--deprioritize", help="words that mark a weaker lead, e.g. student")
+    i.add_argument("--exclude", help="companies or email domains to skip")
+    i.add_argument("--ask", help="what your first note asks for, e.g. 'a 15-minute call'")
+    i.add_argument("--sender", help="your first name, to sign drafts")
+    i.add_argument("--event", help="default event name for attendee drafts")
+    i.add_argument("--out", default=str(profile.DEFAULT_PATH), help="where to save it (default cantrip.toml)")
+    i.add_argument("--force", action="store_true", help="overwrite an existing profile")
+    i.set_defaults(func=init)
 
     p = sub.add_parser("cast", help="run a spell from the spellbook")
     p.add_argument("spell", help="spell name (e.g. attendees-to-leads) or path to its folder")
@@ -95,6 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--stars", help="GitHub repo whose stargazers to read, as owner/name (needs GITHUB_TOKEN)")
     p.add_argument("--signal", default="registered", choices=["registered", "attended"],
                    help="what the people in the CSV did, when it has no check-in column (default: registered)")
+    p.add_argument("--profile", help="your profile (default ./cantrip.toml, made by `cantrip init`)")
     p.add_argument("--event", help="event name to use in the drafts")
     p.add_argument("--github", action="store_true", help="for CSV rows with a GitHub column, add their GitHub profile")
     p.add_argument("--limit", type=int, default=50, help="max people to read from GitHub (default 50)")

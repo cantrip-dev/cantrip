@@ -1,22 +1,15 @@
 # github-to-leads: find developers by their GitHub profile (a search, a list of
-# logins, a repo's contributors or stargazers), score them on who you sell to,
-# and draft a first note. Copy this file and edit it for your own product.
-
-product = "Cantrip"
-sender = ""          # your first name, used to sign the drafts
-ask = "Would you be up for a 15-minute call to tell me what you'd want it to do?"
+# logins, a repo's contributors or stargazers), score them against your ICP,
+# and draft a first note.
+#
+# What you sell and who you sell to come from your profile (cantrip.toml,
+# made by `cantrip init`). This file only holds how the spell scores and writes.
 
 [icp]
-# Whole words or phrases, matched case-insensitively against the profile's
-# company, bio and (from an attendee list) job title.
-target_companies = []    # e.g. ["Databricks", "Snowflake", "Redis"]
-keywords = ["ai", "llm", "agents", "open source", "open-source", "devtools", "developer tools", "infra", "api", "sdk"]
-languages = ["Python", "TypeScript", "Go", "Rust"]
-deprioritize = ["student", "learning", "aspiring", "looking for"]
-exclude = []             # companies or email domains to skip
-influencer_followers = 500
+influencer_followers = 500  # followers that count as influence
 
-# Seniority: the highest matching level counts.
+# Seniority ladder, read from job titles and bios. The highest matching level counts.
+# Your profile's `seniority` setting scales these points (high, normal, low, ignore).
 [[icp.seniority]]
 points = 30
 words = ["founder", "co-founder", "cofounder", "ceo", "cto", "cmo", "chief", "owner", "president"]
@@ -29,17 +22,6 @@ words = ["lead", "principal", "staff", "manager"]
 [[icp.seniority]]
 points = 5
 words = ["senior", "sr"]
-
-# Job function: who buys or champions what you sell. The highest matching one counts.
-[[icp.functions]]
-points = 25
-words = ["developer relations", "devrel", "developer advocate", "developer advocacy", "developer experience", "community"]
-[[icp.functions]]
-points = 20
-words = ["marketing", "growth", "partnerships", "partner", "go-to-market", "gtm", "sales", "business development", "ecosystem"]
-[[icp.functions]]
-points = 10
-words = ["engineering", "engineer", "developer", "product", "ml", "ai", "data"]
 
 [icp.weights]
 has_company = 10
@@ -56,26 +38,28 @@ deprioritize = -20
 hot = 60
 warm = 30
 
-# Templates per tier. Fields: {first_name} {company} {title} {event} {signal} {reason} {sender} {product} {ask}
+# Templates per tier. Fields: {first_name} {company} {title} {event} {signal} {reason}
+# {product} {pitch} {product_line} ("product, pitch") {ask} {sender}. Override any of them
+# in your profile under [templates].
 [templates]
 hot = """
 Hi {first_name},
 
-I came across your GitHub: you {signal}. I'm building {product} for teams like {company} who sell to developers, and I'd value your take.
+I came across your GitHub: you {signal}. I'm reaching out about {product_line}, which I think could be useful to you and {company}.
 
-{ask}
+Would you be open to {ask}?
 
 {sender}
 """
 warm = """
 Hi {first_name},
 
-I came across your GitHub and liked what you're building. I'm working on {product} in the open and would love to hear what you'd use it for.
+I came across your GitHub and liked what you're building. I wanted to share {product_line}, and I'd love to hear whether it's useful to you.
 
 {sender}
 """
 default = """
-Hi {first_name}, I'm building {product} in the open. If it sounds useful, I'd love your feedback.
+Hi {first_name}, I wanted to share {product_line}. If it sounds useful, I'd love your feedback.
 
 {sender}
 """

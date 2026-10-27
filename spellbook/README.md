@@ -1,9 +1,9 @@
 # The spellbook
 
 Each spell is one go-to-market workflow, small enough to read in a minute.
-A spell is a folder with two files:
+Spells are product-neutral: what you sell and who you sell to come from your profile (`cantrip.toml`, made by `cantrip init`). A spell is a folder with two files:
 
-- `spell.toml`: the rules. Who counts as a good fit, how to score them, what the first note says.
+- `spell.toml`: how it scores (seniority ladder, weights, tiers) and what the first note says. Your profile is laid over it.
 - `SPELL.md`: the same workflow written as steps an AI agent (or a person) can follow, including the parts code can't do well yet, like reading someone's recent work before writing to them.
 
 Copy a spell, change the TOML, and you have your own. Spells never send anything: they draft, a human approves.

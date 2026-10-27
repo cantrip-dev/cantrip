@@ -1,21 +1,15 @@
 # attendees-to-leads: an event guest list (name, email, company, job title,
 # LinkedIn...) sorted into the people most worth following up with, each with
 # a drafted note. Works with a Luma export or any registration CSV.
-# Copy this file and edit it for your own event and offer.
+#
+# What you sell and who you sell to come from your profile (cantrip.toml,
+# made by `cantrip init`). This file only holds how the spell scores and writes.
 
-product = "working together"  # what you're following up about, e.g. "sponsoring our next event"
-sender = ""          # your first name, used to sign the drafts
-event_name = ""      # or pass --event "Open Source AI Day"
-ask = "Would you be open to a quick call next week?"
+event_name = ""      # or pass --event "Your Event Name"
 
 [icp]
-# Whole words or phrases, matched case-insensitively.
-target_companies = []    # e.g. ["Databricks", "Snowflake", "Redis"]: matched on company and email domain
-keywords = ["ai", "llm", "agents", "open source", "devtools", "developer tools", "infra", "platform", "data"]
-deprioritize = ["student", "intern", "looking for", "job seeker", "unemployed", "between roles"]
-exclude = []             # companies or email domains to skip, e.g. ["yourcompany.com"]
-
-# Seniority: the highest matching level counts.
+# Seniority ladder, read from job titles and bios. The highest matching level counts.
+# Your profile's `seniority` setting scales these points (high, normal, low, ignore).
 [[icp.seniority]]
 points = 30
 words = ["founder", "co-founder", "cofounder", "ceo", "cto", "cmo", "chief", "owner", "president"]
@@ -28,17 +22,6 @@ words = ["lead", "principal", "staff", "manager"]
 [[icp.seniority]]
 points = 5
 words = ["senior", "sr"]
-
-# Job function: who buys or champions what you sell. The highest matching one counts.
-[[icp.functions]]
-points = 25
-words = ["developer relations", "devrel", "developer advocate", "developer advocacy", "developer experience", "community"]
-[[icp.functions]]
-points = 20
-words = ["marketing", "growth", "partnerships", "partner", "go-to-market", "gtm", "sales", "business development", "ecosystem"]
-[[icp.functions]]
-points = 10
-words = ["engineering", "engineer", "developer", "product", "ml", "ai", "data"]
 
 [icp.weights]
 has_company = 10
@@ -53,21 +36,23 @@ deprioritize = -25
 hot = 60
 warm = 35
 
-# Templates per tier. Fields: {first_name} {company} {title} {event} {signal} {reason} {sender} {product} {ask}
+# Templates per tier. Fields: {first_name} {company} {title} {event} {signal} {reason}
+# {product} {pitch} {product_line} ("product, pitch") {ask} {sender}. Override any of them
+# in your profile under [templates].
 [templates]
 hot = """
 Hi {first_name},
 
-Thanks for joining us at {event}. I'd love to hear what {company} is working on, and talk about {product}.
+Thanks for being part of {event}. I'm reaching out about {product_line}, which I think could be a fit for {company}.
 
-{ask}
+Would you be open to {ask}?
 
 {sender}
 """
 warm = """
 Hi {first_name},
 
-Thanks for coming to {event}! If {company} would be up for {product}, I'd be glad to share more.
+Thanks for being part of {event}! I wanted to share {product_line}, in case it's useful for {company}. Happy to tell you more.
 
 {sender}
 """

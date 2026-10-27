@@ -16,12 +16,13 @@ SIGNAL_PHRASES = {
     "attended": "came to {event}",
     "contributed": "contributed to {origin}",
     "starred": "starred {origin}",
-    "found": "work on {topic}",
+    "found": "build with {topic}",
 }
 
 
 def _context(lead: Lead, spell: dict[str, Any]) -> dict[str, str]:
     origin = lead.source.split(":", 1)[-1]
+    product, pitch = spell.get("product", "what we're building"), spell.get("pitch", "")
     phrase = SIGNAL_PHRASES.get(lead.signal, "{origin}").format(
         origin=origin, event=spell.get("event_name") or "the event",
         topic=", ".join(lead.top_languages[:2]) or "open source")
@@ -33,8 +34,10 @@ def _context(lead: Lead, spell: dict[str, Any]) -> dict[str, str]:
         "signal": phrase,
         "reason": lead.reasons[0] if lead.reasons else "",
         "sender": spell.get("sender", ""),
-        "product": spell.get("product", ""),
-        "ask": spell.get("ask", ""),
+        "product": product,
+        "pitch": pitch,
+        "product_line": f"{product}, {pitch}" if pitch else product,
+        "ask": spell.get("ask") or "a quick call",
     }
 
 
