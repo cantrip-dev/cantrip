@@ -1,15 +1,22 @@
-"""The Cantrip UI: a local web page for your profile and your runs.
+"""The Cantrip UI: a web page for your profile and your runs.
 
-It runs on your own computer (127.0.0.1 only), uses only Python's standard
-library, and keeps everything in local files: your profile in cantrip.toml,
-your results wherever you download them. Keys typed into the page (GitHub,
-AI, search) are used for that run only and are never written to disk.
+By default it runs on your own computer (127.0.0.1) with nothing to sign in to. It can also be
+deployed on a server (see the README's "Deploy it"): then it asks for the password set in
+CANTRIP_PASSWORD before it shows anything, and won't start without one. It uses only Python's
+standard library and keeps everything in local files: your profile in cantrip.toml, your results
+wherever you download them. Keys typed into the page (GitHub, AI, search) are used for that run
+only and are never written to disk.
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import os
+import sys
+import time
 import threading
 import tomllib
 import urllib.error
@@ -27,7 +34,8 @@ from cantrip.sources import csv_file, github
 from cantrip.sources import web as web_source
 
 HERE = Path(__file__).resolve().parent
-ALLOWED_HOSTS = ("127.0.0.1", "localhost")
+LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
+MIN_PASSWORD = 12
 SOURCES = ("csv", "search", "users", "contributors", "stars", "web")
 MAX_BODY = 50 * 1024 * 1024
 
@@ -79,8 +87,25 @@ def _leads_for(req: dict[str, Any], config=None, ai=None, search=None):
     return github.stargazers(value, limit=limit, do_enrich=enrich)
 
 
+def _hostname(value: str) -> str:
+    """'Example.com:8765' or 'https://example.com' -> 'example.com'."""
+    value = (value or "").strip()
+    if "://" not in value:
+        value = "//" + value
+    try:
+        return (urllib.parse.urlsplit(value).hostname or "").lower()
+    except ValueError:
+        return ""
+
+
+def _allowed_hosts() -> set[str]:
+    return {_hostname(h) for h in os.environ.get("CANTRIP_ALLOWED_HOSTS", "").split(",") if h.strip()}
+
+
 class Handler(BaseHTTPRequestHandler):
     profile_path: Path = profile.DEFAULT_PATH
+    password_hash: bytes | None = None  # set when CANTRIP_PASSWORD is: then every page asks for it
+    allowed_hosts: set[str] = set()     # extra hostnames this copy answers to (CANTRIP_ALLOWED_HOSTS)
     run_lock = threading.Lock()
     last_results: list = []  # the latest run's leads, for "Add to CRM"
 
@@ -102,19 +127,48 @@ class Handler(BaseHTTPRequestHandler):
         self._send(status, json.dumps(data).encode(), "application/json")
 
     def _trusted(self) -> bool:
-        # Only answer pages served from this computer (guards against DNS rebinding).
-        host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
-        if host not in ALLOWED_HOSTS:
+        host = _hostname(self.headers.get("Host") or "")
+        if self.password_hash is None:
+            # No password: answer only pages served from this computer (guards against DNS rebinding).
+            if host not in LOCAL_HOSTS and host not in self.allowed_hosts:
+                return False
+        elif self.allowed_hosts and host not in self.allowed_hosts and host not in LOCAL_HOSTS:
             return False
-        # And refuse requests another website makes from the user's browser.
+        # Refuse requests another website makes from the user's browser: the Origin must be this site.
         origin = self.headers.get("Origin")
         if origin is None:
             return True
-        return urllib.parse.urlsplit(origin).hostname in ALLOWED_HOSTS
+        same_site = {host, _hostname(self.headers.get("X-Forwarded-Host") or "")} | self.allowed_hosts
+        return _hostname(origin) in same_site - {""}
+
+    def _signed_in(self) -> bool:
+        if self.password_hash is None:
+            return True
+        auth = self.headers.get("Authorization") or ""
+        if auth.startswith("Basic "):
+            try:
+                given = base64.b64decode(auth[6:], validate=True).decode().partition(":")[2]
+            except (ValueError, UnicodeDecodeError):
+                given = ""
+            if hmac.compare_digest(hashlib.sha256(given.encode()).digest(), self.password_hash):
+                return True
+            time.sleep(1)  # slows down password guessing
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="Cantrip", charset="UTF-8"')
+        self.send_header("Content-Type", "text/plain")
+        body = b"Sign in with the password set in CANTRIP_PASSWORD (any user name)."
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+        return False
 
     def do_GET(self) -> None:
+        if self.path == "/healthz":  # for hosting platforms' health checks: says nothing else
+            return self._send(200, b"ok", "text/plain")
         if not self._trusted():
             return self._send(403, b"Forbidden", "text/plain")
+        if not self._signed_in():
+            return
         if self.path in ("/", "/index.html"):
             return self._send(200, (HERE / "index.html").read_bytes(), "text/html; charset=utf-8")
         if self.path == "/logo.png":
@@ -124,7 +178,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.profile_path.exists():
                 with self.profile_path.open("rb") as fh:
                     mine = tomllib.load(fh)
-            return self._json({"version": __version__, "profile": mine, "profile_path": str(self.profile_path),
+            return self._json({"version": __version__, "profile": mine, "profile_path": self.profile_path.name,
                                "spells": _spells(), "questions": [[k, q, h] for k, q, h in profile.QUESTIONS],
                                "has_token": bool(os.environ.get("GITHUB_TOKEN")),
                                "has_ai": AI.from_env().ready, "has_search": Search.from_env().ready,
@@ -135,6 +189,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._trusted() or self.headers.get("Content-Type", "").split(";")[0] != "application/json":
             return self._send(403, b"Forbidden", "text/plain")
+        if not self._signed_in():
+            return
         length = int(self.headers.get("Content-Length") or 0)
         if length > MAX_BODY:
             return self._json({"error": "That file is too big (50 MB at most)."}, 413)
@@ -250,16 +306,36 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"counts": counts, "label": crm.label, "leads": [lead.to_row() for lead in self.last_results]})
 
 
-def serve(port: int = 8765, profile_path: str | Path | None = None, open_browser: bool = True) -> None:
+def serve(port: int | None = None, profile_path: str | Path | None = None, open_browser: bool = True,
+          host: str | None = None) -> None:
+    """Run the app. Defaults come from the environment, so a deployed copy needs no flags:
+    CANTRIP_HOST (127.0.0.1), PORT or CANTRIP_PORT (8765), CANTRIP_PROFILE (./cantrip.toml),
+    CANTRIP_PASSWORD and CANTRIP_ALLOWED_HOSTS."""
+    host = host or os.environ.get("CANTRIP_HOST") or "127.0.0.1"
+    port = port or int(os.environ.get("PORT") or os.environ.get("CANTRIP_PORT") or 8765)
+    profile_path = profile_path or os.environ.get("CANTRIP_PROFILE")
     Handler.profile_path = Path(profile_path) if profile_path else profile.DEFAULT_PATH
+    Handler.profile_path.parent.mkdir(parents=True, exist_ok=True)
+    Handler.allowed_hosts = _allowed_hosts()
+    password = os.environ.get("CANTRIP_PASSWORD", "")
+    local = host in LOCAL_HOSTS and not (Handler.allowed_hosts - set(LOCAL_HOSTS))
+    if not local and len(password) < MIN_PASSWORD:
+        sys.exit(f"Cantrip won't run on {host} without a password: anyone who reaches it could use your keys. "
+                 f"Set CANTRIP_PASSWORD to at least {MIN_PASSWORD} characters (in the server's settings or .env).")
+    Handler.password_hash = hashlib.sha256(password.encode()).digest() if password else None
     try:
-        server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    except OSError:  # port taken: let the system pick a free one
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    url = f"http://127.0.0.1:{server.server_address[1]}/"
-    print(f"Cantrip is running at {url}  (profile: {Handler.profile_path.resolve()})", flush=True)
+        server = ThreadingHTTPServer((host, port), Handler)
+    except OSError:
+        if not local:
+            raise
+        server = ThreadingHTTPServer((host, 0), Handler)  # port taken on this computer: pick a free one
+    url = f"http://{'127.0.0.1' if host == '0.0.0.0' else host}:{server.server_address[1]}/"
+    where = f"on port {server.server_address[1]}, all addresses" if host == "0.0.0.0" else f"at {url}"
+    print(f"Cantrip is running {where}  (profile: {Handler.profile_path.resolve()})", flush=True)
+    if Handler.password_hash:
+        print("Sign-in: the password in CANTRIP_PASSWORD (any user name). Serve it over https.", flush=True)
     print("Press Ctrl+C to stop.", flush=True)
-    if open_browser:
+    if open_browser and local:
         threading.Timer(0.5, webbrowser.open, [url]).start()
     try:
         server.serve_forever()

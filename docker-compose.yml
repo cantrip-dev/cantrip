@@ -1,0 +1,13 @@
+# docker compose up -d   (put CANTRIP_PASSWORD and your keys in .env next to this file first)
+services:
+  cantrip:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    env_file: .env
+    volumes:
+      - cantrip-data:/data
+
+volumes:
+  cantrip-data:
