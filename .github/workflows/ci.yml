@@ -42,11 +42,11 @@ jobs:
         run: "! docker run --rm cantrip"
       - name: Runs with one, asks for it, and keeps the profile in /data
         run: |
-          docker run -d --name c -p 8765:8765 -e CANTRIP_PASSWORD='correct horse battery' cantrip
+          docker run -d --name cantrip-test -p 8765:8765 -e CANTRIP_PASSWORD='correct horse battery' cantrip
           for i in $(seq 30); do curl -sf localhost:8765/healthz && break; sleep 1; done
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8765/)" = 401
           test "$(curl -s -o /dev/null -w '%{http_code}' -u me:'correct horse battery' localhost:8765/)" = 200
           curl -sf -u me:'correct horse battery' -H 'Content-Type: application/json' \
             -d '{"name":"X","pitch":"y","buyer_roles":"cto"}' localhost:8765/api/profile
-          docker exec c test -s /data/cantrip.toml
-          test "$(docker inspect -f '{{.Config.User}}' c)" = cantrip
+          docker exec cantrip-test test -s /data/cantrip.toml
+          test "$(docker inspect -f '{{.Config.User}}' cantrip-test)" = cantrip
