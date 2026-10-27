@@ -122,7 +122,7 @@ def test_plain_cantrip_opens_the_app(monkeypatch):
     seen = {}
     monkeypatch.setattr(server, "serve", lambda **kw: seen.update(kw))
     assert main([]) == 0
-    assert seen["port"] == 8765 and seen["open_browser"] is True
+    assert seen["open_browser"] is True and seen["host"] is None  # serve() then uses 127.0.0.1:8765
 
 
 def test_csv_cells_cannot_run_as_formulas(tmp_path):

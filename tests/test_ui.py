@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 import threading
 import urllib.error
@@ -7,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from cantrip.ui import server
 from cantrip.ui.server import Handler
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -16,15 +19,18 @@ GUESTS = (ROOT / "examples" / "luma-guests.csv").read_text()
 @pytest.fixture
 def ui(tmp_path):
     Handler.profile_path = tmp_path / "cantrip.toml"
+    Handler.password_hash, Handler.allowed_hosts = None, set()
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{server.server_address[1]}"
     server.shutdown()
 
 
-def call(url, body=None, host=None, origin=None):
+def call(url, body=None, host=None, origin=None, password=None):
     req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Content-Type": "application/json"})
+    if password is not None:
+        req.add_header("Authorization", "Basic " + base64.b64encode(f"me:{password}".encode()).decode())
     if host:
         req.add_header("Host", host)
     if origin:
@@ -69,3 +75,34 @@ def test_other_websites_are_refused(ui):
     body = {"name": "X", "pitch": "y", "buyer_roles": "cto"}
     assert call(ui + "/api/profile", body, origin="https://evil.example")[0] == 403
     assert call(ui + "/api/profile", body, origin=ui)[0] == 200
+
+
+def test_deployed_copy_asks_for_the_password(ui, monkeypatch):
+    monkeypatch.setattr(server.time, "sleep", lambda _: None)
+    Handler.password_hash = hashlib.sha256(b"correct horse battery").digest()
+    assert call(ui + "/healthz")[0] == 200  # health checks need no password and learn nothing
+    assert call(ui + "/api/state")[0] == 401
+    assert call(ui + "/api/state", password="wrong password!")[0] == 401
+    assert call(ui + "/api/state", host="leads.example.com", password="correct horse battery")[0] == 200
+    body = {"name": "X", "pitch": "y", "buyer_roles": "cto"}
+    # Signed in or not, another website can't make the browser save or run anything.
+    assert call(ui + "/api/profile", body, host="leads.example.com", origin="https://evil.example",
+                password="correct horse battery")[0] == 403
+    assert call(ui + "/api/profile", body, host="leads.example.com", origin="https://leads.example.com",
+                password="correct horse battery")[0] == 200
+
+
+def test_allowed_hosts_lock_a_deployed_copy_to_its_address(ui):
+    Handler.password_hash = hashlib.sha256(b"correct horse battery").digest()
+    Handler.allowed_hosts = {"leads.example.com"}
+    assert call(ui + "/api/state", host="other.example", password="correct horse battery")[0] == 403
+    assert call(ui + "/api/state", host="leads.example.com", password="correct horse battery")[0] == 200
+
+
+def test_no_password_off_this_computer_refuses_to_start(monkeypatch, tmp_path):
+    monkeypatch.delenv("CANTRIP_PASSWORD", raising=False)
+    with pytest.raises(SystemExit, match="CANTRIP_PASSWORD"):
+        server.serve(host="0.0.0.0", profile_path=tmp_path / "p.toml", open_browser=False)
+    monkeypatch.setenv("CANTRIP_PASSWORD", "short")
+    with pytest.raises(SystemExit, match="at least 12"):
+        server.serve(host="0.0.0.0", profile_path=tmp_path / "p.toml", open_browser=False)

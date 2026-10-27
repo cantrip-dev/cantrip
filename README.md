@@ -70,9 +70,39 @@ Coming next: Discord and Reddit sources. Ideas and pull requests are welcome.
 cantrip           # or: cantrip ui --port 8800
 ```
 
-This opens Cantrip in your browser. Fill in your profile, drop in an attendee CSV or type a GitHub search, and press **Cast it**. You get your leads best-first, can filter by tier, read and copy each draft, and download the CSV. The app runs only on your own computer (127.0.0.1) and saves nothing but your profile.
+This opens Cantrip in your browser. Fill in your profile, drop in an attendee CSV or type a GitHub search, and press **Cast it**. You get your leads best-first, can filter by tier, read and copy each draft, and download the CSV. It runs on your own computer by default, or [deploy it](#deploy-it) to share it with your team. Either way it saves nothing but your profile.
 
 <p align="center"><img src="assets/ui.png" alt="The Cantrip app: a profile, a spell, and sorted leads with drafts" width="720"></p>
+
+## Deploy it
+
+Cantrip runs the same on a server, so your team can use one copy from a browser. On anything but your own computer it asks for a password before it shows anything, and it won't start without one.
+
+**With Docker** (any server, or a host that runs containers):
+
+```bash
+git clone https://github.com/cantrip-dev/cantrip.git && cd cantrip
+cp .env.example .env      # set CANTRIP_PASSWORD (12+ characters) and any keys
+docker compose up -d      # the app is on port 8765; your profile lives in a Docker volume
+```
+
+**Without Docker**, on any machine with Python 3.11+:
+
+```bash
+CANTRIP_PASSWORD='a long passphrase' cantrip ui --host 0.0.0.0 --port 8765 --no-browser
+```
+
+Hosting platforms that build from a Dockerfile (Render, Railway, Fly.io, Google Cloud Run...) work as they are: Cantrip listens on their `PORT`, answers their health check at `/healthz`, and reads its settings from their environment variables. Keep the profile on a persistent disk mounted at `/data`, or it resets when the app restarts.
+
+| Setting | What it does |
+| --- | --- |
+| `CANTRIP_PASSWORD` | Required off your own computer, 12 characters or more. The browser asks for it (any user name). |
+| `CANTRIP_HOST` / `--host` | Address to listen on: `127.0.0.1` (default, this computer only) or `0.0.0.0` (a server). The Docker image uses `0.0.0.0`. |
+| `PORT` / `--port` | Port to listen on (default 8765). |
+| `CANTRIP_PROFILE` / `--profile` | Where the profile is saved (the Docker image uses `/data/cantrip.toml`). |
+| `CANTRIP_ALLOWED_HOSTS` | Optional: the addresses it answers to, comma-separated (e.g. `leads.example.com`). Anything else is refused. |
+
+Put it behind https (your host's, or a reverse proxy such as Caddy), since the password travels with every request. One copy is meant for one team: everyone who signs in shares the profile, the keys set on the server and the latest results.
 
 ## What it needs
 

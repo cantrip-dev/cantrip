@@ -219,7 +219,7 @@ def search_check(args: argparse.Namespace) -> int:
 def ui(args: argparse.Namespace) -> int:
     from cantrip.ui.server import serve
 
-    serve(port=args.port, profile_path=args.profile, open_browser=not args.no_browser)
+    serve(port=args.port, profile_path=args.profile, open_browser=not args.no_browser, host=args.host)
     return 0
 
 
@@ -250,9 +250,12 @@ def main(argv: list[str] | None = None) -> int:
     i.add_argument("--force", action="store_true", help="overwrite an existing profile")
     i.set_defaults(func=init)
 
-    u = sub.add_parser("ui", help="open Cantrip in your browser (runs on this computer only)")
-    u.add_argument("--port", type=int, default=8765, help="port to use (default 8765)")
-    u.add_argument("--profile", help="profile to use and save (default ./cantrip.toml)")
+    u = sub.add_parser("ui", help="open Cantrip in your browser (on this computer, or deployed on a server)",
+                       description="Runs the app. On a server, set CANTRIP_PASSWORD; see the README's Deploy it.")
+    u.add_argument("--host", help="address to listen on (default 127.0.0.1, this computer only; 0.0.0.0 on a "
+                   "server, which needs CANTRIP_PASSWORD)")
+    u.add_argument("--port", type=int, help="port to use (default $PORT or 8765)")
+    u.add_argument("--profile", help="profile to use and save (default $CANTRIP_PROFILE or ./cantrip.toml)")
     u.add_argument("--no-browser", action="store_true", help="don't open a browser tab")
     u.set_defaults(func=ui)
 

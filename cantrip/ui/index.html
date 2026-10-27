@@ -97,7 +97,7 @@
   <!-- 1. Profile -->
   <section id="profile">
     <h2><span class="n">1</span> What you sell, and who buys it</h2>
-    <p class="sub">Every spell scores people against this profile. It's saved on this computer as <code id="ppath">cantrip.toml</code>.</p>
+    <p class="sub">Every spell scores people against this profile. It's saved where Cantrip runs, as <code id="ppath">cantrip.toml</code>.</p>
     <div id="profile-view" class="hidden">
       <div class="profile-summary" id="profile-summary"></div>
       <div class="actions"><button id="edit-profile">Edit profile</button>
@@ -175,14 +175,14 @@
         To set them once, use the environment variables in the README.</p>
       <div class="grid">
         <div><label>AI provider</label><select id="ai-provider">
-          <option value="">from this computer's settings</option>
+          <option value="">from Cantrip's settings</option>
           <option value="openai">OpenAI or any OpenAI-compatible API (OpenRouter, Groq, Ollama…)</option>
           <option value="anthropic">Anthropic</option></select></div>
         <div><label>AI key</label><input type="password" id="ai-key" autocomplete="off"></div>
         <div><label>API address <span class="hint">(optional, e.g. http://localhost:11434/v1 for Ollama)</span></label><input type="text" id="ai-base-url"></div>
         <div><label>Model <span class="hint">(optional)</span></label><input type="text" id="ai-model" placeholder="gpt-4o-mini or claude-haiku-4-5"></div>
         <div><label>Search service</label><select id="search-provider">
-          <option value="">from this computer's settings</option>
+          <option value="">from Cantrip's settings</option>
           <option value="tinyfish">TinyFish (free, also reads script-heavy pages)</option>
           <option value="exa">Exa (people and company search)</option>
           <option value="tavily">Tavily</option><option value="brave">Brave Search</option>
@@ -472,7 +472,7 @@ const CRM_FIELDS = {
 function buildCrm() {
   const name = $("crm").value, set = state.crms?.[name]?.set;
   $("crm-fields").innerHTML = CRM_FIELDS[name].map(([key, label, type, hint]) =>
-    `<label>${label} <span class="hint">(${set ? "set on this computer; leave empty to use it" : esc(hint)})</span></label>
+    `<label>${label} <span class="hint">(${set ? "already set; leave empty to use it" : esc(hint)})</span></label>
      <input type="${type}" data-key="${key}" autocomplete="off">`).join("");
 }
 $("crm").onchange = buildCrm;
@@ -497,9 +497,9 @@ $("search-provider").onchange = () => $("exa-row").classList.toggle("hidden", $(
   state = await api("/api/state");
   $("ver").textContent = "v" + state.version;
   $("ppath").textContent = state.profile_path;
-  if (state.has_token) $("token-hint").textContent = "(already set on this computer; leave empty to use it)";
-  $("ai-status").textContent = state.has_ai && state.has_search ? "(set on this computer)"
-    : state.has_ai ? "(AI set on this computer; search not set)" : state.has_search ? "(search set; AI not set)" : "(not set yet)";
+  if (state.has_token) $("token-hint").textContent = "(already already set; leave empty to use it)";
+  $("ai-status").textContent = state.has_ai && state.has_search ? "(set)"
+    : state.has_ai ? "(AI set; search not set)" : state.has_search ? "(search set; AI not set)" : "(not set yet)";
   showProfile(); buildSpells(); buildGhInput(); buildCrm();
 })();
 </script>
