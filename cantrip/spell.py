@@ -7,7 +7,10 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-SPELLBOOK = Path(__file__).resolve().parent.parent / "spellbook"
+# In a clone of the repo the spellbook sits next to the package; in an installed
+# copy it ships inside it.
+_HERE = Path(__file__).resolve().parent
+SPELLBOOK = next((p for p in (_HERE.parent / "spellbook", _HERE / "spellbook") if p.is_dir()), _HERE / "spellbook")
 
 
 def load(name_or_path: str) -> dict[str, Any]:

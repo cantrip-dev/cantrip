@@ -24,8 +24,11 @@ cantrip = "cantrip.cli:main"
 [project.urls]
 Homepage = "https://github.com/cantrip-dev/cantrip"
 
-[tool.setuptools.packages.find]
-include = ["cantrip*"]
+[tool.setuptools]
+# The spellbook lives at the top of the repo, and ships inside the package as cantrip.spellbook.
+package-dir = { "cantrip" = "cantrip", "cantrip.spellbook" = "spellbook" }
+packages = ["cantrip", "cantrip.sources", "cantrip.sinks", "cantrip.ui", "cantrip.spellbook"]
 
 [tool.setuptools.package-data]
 "cantrip.ui" = ["index.html", "logo.png"]
+"cantrip.spellbook" = ["*.md", "*/*.toml", "*/*.md"]
