@@ -53,6 +53,7 @@
   .tabs button.on { background: var(--brand); color: #fff; border-color: var(--brand); }
   .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 22px; text-align: center; color: var(--muted); cursor: pointer; }
   .drop.over, .drop.has { border-color: var(--brand); color: var(--ink); background: var(--brand-soft); }
+  .drop:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
   .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
   .stat { padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: 13px; cursor: pointer; border: 2px solid transparent; }
   .stat.on { border-color: currentColor; }
@@ -128,9 +129,9 @@
     <div class="choices" id="spells"></div>
 
     <div id="src-csv">
-      <div class="drop" id="drop">
-        <input type="file" id="file" accept=".csv,text/csv" class="hidden">
-        <div id="drop-text"><strong>Drop your attendee CSV here</strong>, or click to choose it.<br>
+      <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose an attendee CSV file">
+        <input type="file" id="file" accept=".csv,text/csv" class="hidden" aria-label="Attendee CSV file">
+        <div id="drop-text" aria-live="polite"><strong>Drop your attendee CSV here</strong>, or click or press Enter to choose it.<br>
           A Luma export or any list with name, email, company, job title and LinkedIn.</div>
       </div>
       <div class="grid" style="margin-top:14px">
@@ -374,6 +375,9 @@ function loadFile(file) {
   reader.readAsText(file);
 }
 $("drop").onclick = () => $("file").click();
+$("drop").onkeydown = (e) => {
+  if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); $("file").click(); }
+};
 $("file").onchange = (e) => loadFile(e.target.files[0]);
 $("drop").ondragover = (e) => { e.preventDefault(); $("drop").classList.add("over"); };
 $("drop").ondragleave = () => $("drop").classList.remove("over");

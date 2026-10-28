@@ -51,6 +51,16 @@ def test_page_and_state(ui):
     assert {"attendees-to-leads", "github-to-leads"} <= {s["name"] for s in state["spells"]}
 
 
+def test_csv_drop_zone_is_keyboard_reachable(ui):
+    status, page = call(ui + "/")
+    html = page.decode()
+    assert status == 200
+    assert 'id="drop" role="button" tabindex="0"' in html
+    assert 'aria-label="Choose an attendee CSV file"' in html
+    assert 'aria-live="polite"' in html
+    assert 'e.key === "Enter"' in html
+
+
 def test_profile_then_run(ui):
     status, body = call(ui + "/api/run", {"spell": "attendees-to-leads", "source": "csv", "value": GUESTS})
     assert status == 400 and b"profile" in body
