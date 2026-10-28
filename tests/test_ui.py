@@ -124,7 +124,7 @@ def demo_call(url, body=None, cookie=None):
 def test_demo_gives_each_visitor_a_profile_and_keeps_nothing(ui, tmp_path):
     Handler.demo = True
     status, state, set_cookie = demo_call(ui + "/api/state")
-    assert status == 200 and state["demo"] and state["profile"]["product"]["name"]
+    assert status == 200 and state["demo"] and state["profile"]["product"]["name"] == "Cantrip"
     assert [s["name"] for s in state["spells"]] == ["attendees-to-leads"]
     me = set_cookie.split(";")[0]
     # Casting with no file sorts the sample list; asking for GitHub still runs only the guest-list spell.

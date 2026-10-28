@@ -244,7 +244,7 @@ class Handler(BaseHTTPRequestHandler):
                 return visit
             visit = secrets.token_urlsafe(18)
             self.cookie = visit
-            example = EXAMPLES / "profiles" / "event-sponsorships.toml"
+            example = EXAMPLES / "profiles" / "cantrip.toml"
             self.demo_profiles[visit] = profile.load(example) if example.exists() else None
             while len(self.demo_profiles) > DEMO_SESSIONS:
                 self.demo_profiles.popitem(last=False)

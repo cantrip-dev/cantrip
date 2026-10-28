@@ -1,0 +1,20 @@
+# Example: Cantrip promoting itself to GTM people at early-stage devtool and AI startups (the public demo uses this).
+# Every spell scores leads against this file. Edit it any time.
+
+[product]
+name = "Cantrip"
+pitch = "an open-source GTM engine that turns event attendees, GitHub users and web searches into scored leads, each with a reason to reach out now and a drafted first note, and puts them in your CRM"
+ask = "trying it on one of your own lead lists and telling me what breaks"
+sender = "Yujian"
+
+[icp]
+seniority = "normal"  # high | normal | low | ignore
+buyer_roles = ["founder", "co-founder", "ceo", "head of growth", "head of gtm", "go-to-market", "head of sales", "vp sales", "revops", "revenue operations", "growth lead", "founding gtm"]
+champion_roles = ["gtm engineer", "growth engineer", "sdr", "bdr", "account executive", "sales operations", "marketing operations", "demand generation", "growth marketer"]
+why_now = ["just hired a first head of sales or growth", "announced a seed or Series A round", "launched on Product Hunt or Show HN", "open sourced a developer tool", "launched an API or developer platform", "hiring a founding GTM or first sales hire"]
+stages = ["pre-seed", "seed", "series a", "yc", "y combinator"]
+target_companies = []
+keywords = ["developer tools", "devtool", "open source", "open-source", "ai infrastructure", "developer platform", "api", "sdk", "llm", "agents", "b2b", "infrastructure"]
+languages = []
+deprioritize = ["student", "intern", "recruiter", "investor", "journalist", "ai sdr", "sales automation", "sales engagement", "lead generation platform", "sales intelligence", "revenue intelligence", "revops platform", "ai for sales", "sales teams"]
+exclude = ["clay.com", "apollo.io", "commonroom.io"]
