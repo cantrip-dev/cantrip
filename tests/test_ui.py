@@ -19,7 +19,8 @@ GUESTS = (ROOT / "examples" / "luma-guests.csv").read_text()
 @pytest.fixture
 def ui(tmp_path):
     Handler.profile_path = tmp_path / "cantrip.toml"
-    Handler.password_hash, Handler.allowed_hosts = None, set()
+    Handler.password_hash, Handler.allowed_hosts, Handler.demo = None, set(), False
+    Handler.demo_profiles.clear()
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{server.server_address[1]}"
@@ -106,3 +107,34 @@ def test_no_password_off_this_computer_refuses_to_start(monkeypatch, tmp_path):
     monkeypatch.setenv("CANTRIP_PASSWORD", "short")
     with pytest.raises(SystemExit, match="at least 12"):
         server.serve(host="0.0.0.0", profile_path=tmp_path / "p.toml", open_browser=False)
+
+
+def demo_call(url, body=None, cookie=None):
+    req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Content-Type": "application/json"})
+    if cookie:
+        req.add_header("Cookie", cookie)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return resp.status, json.loads(resp.read()), resp.headers.get("Set-Cookie")
+    except urllib.error.HTTPError as err:
+        return err.code, json.loads(err.read()), None
+
+
+def test_demo_gives_each_visitor_a_profile_and_keeps_nothing(ui, tmp_path):
+    Handler.demo = True
+    status, state, set_cookie = demo_call(ui + "/api/state")
+    assert status == 200 and state["demo"] and state["profile"]["product"]["name"] == "Cantrip"
+    assert [s["name"] for s in state["spells"]] == ["attendees-to-leads"]
+    me = set_cookie.split(";")[0]
+    # Casting with no file sorts the sample list; asking for GitHub still runs only the guest-list spell.
+    status, out, _ = demo_call(ui + "/api/run", {"spell": "github-to-leads", "source": "search", "value": ""}, me)
+    assert status == 200 and len(out["leads"]) == 20
+    # My profile is mine: another visitor still sees the example, and nothing is written to disk.
+    status, _, _ = demo_call(ui + "/api/profile", {"name": "Mine", "pitch": "p", "buyer_roles": "cto"}, me)
+    assert status == 200 and demo_call(ui + "/api/state", None, me)[1]["profile"]["product"]["name"] == "Mine"
+    assert demo_call(ui + "/api/state")[1]["profile"]["product"]["name"] != "Mine"
+    assert not Handler.profile_path.exists()
+    for path in ("/api/why-now", "/api/crm"):
+        assert demo_call(ui + path, {}, me)[0] == 403
+    assert call(ui + "/api/health")[0] == 200

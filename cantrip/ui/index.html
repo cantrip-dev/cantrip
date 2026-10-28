@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cantrip</title>
-<link rel="icon" href="/logo.png">
+<link rel="icon" href="logo.png">
 <style>
   :root {
     --ink: #1d1530; --muted: #6b6380; --line: #e7e2ef; --bg: #f7f5fa; --card: #fff;
@@ -82,22 +82,24 @@
   .evidence a { color: var(--brand); }
   .spinner { width: 16px; height: 16px; border: 2px solid #fff6; border-top-color: #fff; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; vertical-align: -3px; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .demo { max-width: 980px; margin: 14px auto 0; padding: 10px 14px; border-radius: 10px; background: var(--brand-soft); border: 1px solid var(--brand); font-size: 14px; line-height: 1.45; }
   @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .hide-sm { display: none; } }
 </style>
 </head>
 <body>
 <header>
-  <img src="/logo.png" alt="">
+  <img src="logo.png" alt="">
   <h1>Cantrip</h1>
   <span class="tag">Go-to-market, cast at will.</span>
   <span class="ver" id="ver"></span>
 </header>
 
+<div id="demo-banner" class="demo hidden">You're trying the <b>Cantrip demo</b>. Press <b>Cast it</b> to sort a sample guest list, or drop in your own CSV (read for that run only, never stored). The example profile is Cantrip promoting itself: edit it to your own product to see the scores change. GitHub and web spells, AI drafts and CRMs run on your own copy: <a href="https://github.com/cantrip-dev/cantrip" target="_blank" rel="noopener">get Cantrip on GitHub</a>.</div>
 <main>
   <!-- 1. Profile -->
   <section id="profile">
     <h2><span class="n">1</span> What you sell, and who buys it</h2>
-    <p class="sub">Every spell scores people against this profile. It's saved where Cantrip runs, as <code id="ppath">cantrip.toml</code>.</p>
+    <p class="sub" id="profile-sub">Every spell scores people against this profile. It's saved where Cantrip runs, as <code id="ppath">cantrip.toml</code>.</p>
     <div id="profile-view" class="hidden">
       <div class="profile-summary" id="profile-summary"></div>
       <div class="actions"><button id="edit-profile">Edit profile</button>
@@ -297,7 +299,7 @@ $("profile-form").onsubmit = async (e) => {
   const body = Object.fromEntries(new FormData(e.target).entries());
   $("profile-msg").className = "msg"; $("profile-msg").textContent = "Saving…";
   try {
-    state.profile = (await api("/api/profile", body)).profile;
+    state.profile = (await api("api/profile", body)).profile;
     $("profile-msg").textContent = "";
     showProfile();
   } catch (err) { $("profile-msg").className = "msg err"; $("profile-msg").textContent = err.message; }
@@ -307,7 +309,7 @@ $("suggest-why-now").onclick = async () => {
   $("suggest-why-now").disabled = true; $("why-msg").className = "msg";
   $("why-msg").textContent = "Thinking it through and checking each on the web (about a minute)…";
   try {
-    const data = await api("/api/why-now", {ai_provider: $("ai-provider").value, ai_key: $("ai-key").value,
+    const data = await api("api/why-now", {ai_provider: $("ai-provider").value, ai_key: $("ai-key").value,
       ai_base_url: $("ai-base-url").value, ai_model: $("ai-model").value, search_provider: $("search-provider").value,
       search_key: $("search-provider").value === "searxng" ? "" : $("search-key").value.trim(),
       search_url: $("search-provider").value === "searxng" ? $("search-key").value.trim() : ""});
@@ -326,7 +328,7 @@ $("why-save").onclick = async () => {
   const v = profileValues(state.profile);
   v.why_now = [v.why_now, ...picked].filter(Boolean).join(", ");
   try {
-    state.profile = (await api("/api/profile", v)).profile;
+    state.profile = (await api("api/profile", v)).profile;
     $("why-box").classList.add("hidden"); showProfile();
     $("why-msg").className = "msg ok"; $("why-msg").textContent = `Added ${picked.length} to your profile.`;
   } catch (err) { $("why-msg").className = "msg err"; $("why-msg").textContent = err.message; }
@@ -398,7 +400,7 @@ $("run").onclick = async () => {
   $("run-msg").textContent = slow ? "Searching, reading and writing with AI: this can take a few minutes."
     : kind === "github" ? "Reading GitHub profiles can take a minute." : "";
   try {
-    const data = await api("/api/run", body);
+    const data = await api("api/run", body);
     leads = data.leads; tierFilter = "all";
     renderResults(data.summary);
     $("run-msg").className = "msg ok";
@@ -481,7 +483,7 @@ $("crm-go").onclick = async () => {
   document.querySelectorAll("#crm-fields input").forEach((el) => { if (el.value.trim()) settings[el.dataset.key] = el.value.trim(); });
   $("crm-go").disabled = true; $("crm-msg").className = "msg"; $("crm-msg").textContent = "Adding…";
   try {
-    const data = await api("/api/crm", {crm: $("crm").value, min_tier: $("crm-tier").value, settings});
+    const data = await api("api/crm", {crm: $("crm").value, min_tier: $("crm-tier").value, settings});
     const c = data.counts;
     leads = data.leads; renderRows();
     $("crm-msg").className = "msg ok";
@@ -494,12 +496,21 @@ $("search-provider").onchange = () => $("exa-row").classList.toggle("hidden", $(
 
 // ---- start ----
 (async () => {
-  state = await api("/api/state");
+  state = await api("api/state");
   $("ver").textContent = "v" + state.version;
-  $("ppath").textContent = state.profile_path;
-  if (state.has_token) $("token-hint").textContent = "(already already set; leave empty to use it)";
+  if ($("ppath")) $("ppath").textContent = state.profile_path;
+  if (state.has_token) $("token-hint").textContent = "(already set; leave empty to use it)";
   $("ai-status").textContent = state.has_ai && state.has_search ? "(set)"
     : state.has_ai ? "(AI set; search not set)" : state.has_search ? "(search set; AI not set)" : "(not set yet)";
+  if (state.demo) {
+    $("demo-banner").classList.remove("hidden");
+    ["ai-settings", "crm-box"].forEach((id) => $(id)?.classList.add("hidden"));
+    $("research").closest(".extras")?.classList.add("hidden");
+    $("add-github").closest("div")?.classList.add("hidden");
+    $("drop-text").innerHTML = "<strong>Drop a guest-list CSV here</strong>, or just press <b>Cast it</b> to try a sample list.";
+    $("suggest-why-now").classList.add("hidden");
+    $("profile-sub").textContent = "Every spell scores people against this profile. This one is an example: edit it to make it yours. It's kept for this visit only.";
+  }
   showProfile(); buildSpells(); buildGhInput(); buildCrm();
 })();
 </script>

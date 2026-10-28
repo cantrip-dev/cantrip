@@ -7,6 +7,10 @@
 <p align="center"><b>Go-to-market, cast at will.</b><br>
 Tell it what you sell and who buys it. Open-source spells turn event attendees and GitHub profiles into sorted leads and drafted outreach.</p>
 
+<p align="center"><a href="https://jilo3t.ipsion.page/workspace/cantrip-demo/"><b>Try the demo</b></a> (no sign-up) · <a href="#quick-start">Quick start</a> · <a href="#deploy-it">Deploy it</a></p>
+
+<p align="center"><img src="assets/cantrip-demo.gif" alt="Cantrip sorting a 20-person guest list and opening a drafted note" width="800"></p>
+
 ---
 
 Your best leads are people who already showed up: at your event, in a repo, on GitHub. Tell Cantrip what you sell and who buys it, and it scores each of those people against your ideal customer, sorts them best-first, and drafts a first note you can review. It works with the tools you already have, and it never sends anything on its own.
@@ -101,6 +105,7 @@ Hosting platforms that build from a Dockerfile (Render, Railway, Fly.io, Google 
 | `PORT` / `--port` | Port to listen on (default 8765). |
 | `CANTRIP_PROFILE` / `--profile` | Where the profile is saved (the Docker image uses `/data/cantrip.toml`). |
 | `CANTRIP_ALLOWED_HOSTS` | Optional: the addresses it answers to, comma-separated (e.g. `leads.example.com`). Anything else is refused. |
+| `CANTRIP_DEMO` | `1` runs a public demo: no password and no keys, each visitor gets their own profile for the visit, and only the guest-list spell runs, on a sample list or the visitor's own CSV, which is never stored. |
 
 Put it behind https (your host's, or a reverse proxy such as Caddy), since the password travels with every request. One copy is meant for one team: everyone who signs in shares the profile, the keys set on the server and the latest results.
 
@@ -135,7 +140,7 @@ cantrip init --name "Acme Vector" --pitch "a vector database that runs inside Po
   --ask "a 15-minute call" --sender Sam
 ```
 
-Three ready-made examples live in [`examples/profiles/`](examples/profiles/): a devtool startup, an event selling sponsorships, and a B2B SaaS tool. Try one with `--profile examples/profiles/devtool-startup.toml`.
+Four ready-made examples live in [`examples/profiles/`](examples/profiles/): a devtool startup, an event selling sponsorships, a B2B SaaS tool, and Cantrip itself (the one the demo uses). Try one with `--profile examples/profiles/devtool-startup.toml`.
 
 To change how a spell scores or writes (the seniority ladder, the weights, the note templates), override it under `[weights]` or `[templates]` in your profile, or copy the spell's folder and edit its `spell.toml`.
 
