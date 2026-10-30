@@ -1,0 +1,19 @@
+# Cantrip Familiar's tools. It can cast a Cantrip spell and read public GitHub profiles; nothing else.
+# Nothing here can send a message, and the README shows the rule that keeps GitHub read-only.
+
+integrations:
+  - name: YOUR_ACCOUNT~cantrip  # your Guild account name: see ../README.md
+    version: ^1.0.0
+    tools:
+      - cantrip_cantrip_cast
+  - name: guildai~github
+    version: ^2.0.3
+    tools:
+      - github_users_get_by_username
+      - github_repos_list_for_user
+sub_agents: []
+builtins:
+  - name: ui
+    tools:
+      - ui_prompt
+      - ui_progress
