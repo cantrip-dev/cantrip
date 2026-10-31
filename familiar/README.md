@@ -3,7 +3,7 @@
 A [Guild](https://www.guild.ai/) agent that scouts leads with your deployed Cantrip, around the clock, and
 never sends a thing.
 
-Every morning it casts a spell on your copy of Cantrip (say, on your repo's stargazers), takes the five
+Every morning it casts a spell on your copy of Cantrip (say, on your repo's contributors), takes the five
 best leads, reads each one's public GitHub to find one true detail to open with, and hands you a digest
 of drafts to review. The nightmare GTM bot spams everyone; this one can't:
 
@@ -25,7 +25,7 @@ Guild schedule (9 AM) -> Cantrip Familiar -> cantrip_cast -> your Cantrip on Ren
 ## Set it up
 
 You need Cantrip deployed with a password (the [Render button](../README.md#deploy-it) is the quickest;
-add a `GITHUB_TOKEN` there for stargazers), a Guild account, and the
+add a read-only `GITHUB_TOKEN` there for more GitHub lookups), a Guild account, and the
 [Guild CLI](https://docs.guild.ai/quickstart) (`npm install -g @guildai/cli && guild auth login`).
 Below, `ACCOUNT` is your Guild account name and `URL` is your Cantrip's address.
 
@@ -69,7 +69,7 @@ guild workspace create cantrip-familiar
 guild workspace agent add ACCOUNT~cantrip-familiar --workspace ACCOUNT~cantrip-familiar
 guild trigger create --workspace ACCOUNT~cantrip-familiar --type time --agent ACCOUNT~cantrip-familiar \
   --name "Morning scout" --frequency CRON --cron-expression "0 9 * * *" --cron-timezone America/Los_Angeles \
-  --input '{"text":"Scout the stargazers of OWNER/REPO and give me the digest."}'
+  --input '{"text":"Scout the contributors to OWNER/REPO and give me the digest."}'
 ```
 
 Each morning's digest is a session in that workspace. To try it now, open the workspace's **Chat**,

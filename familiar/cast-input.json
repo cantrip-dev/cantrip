@@ -9,10 +9,11 @@
     "spell": {
       "type": "string",
       "enum": [
+        "contributors-to-leads",
         "github-to-leads",
         "attendees-to-leads"
       ],
-      "description": "github-to-leads for GitHub people, attendees-to-leads for an event guest list"
+      "description": "contributors-to-leads for a repo's contributors, github-to-leads for other GitHub people, attendees-to-leads for an event guest list"
     },
     "source": {
       "type": "string",

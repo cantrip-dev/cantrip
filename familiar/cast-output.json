@@ -35,6 +35,10 @@
           },
           "draft": {
             "type": "string"
+          },
+          "contributions": {
+            "type": "string",
+            "description": "commits to the repo, for contributors"
           }
         }
       }
