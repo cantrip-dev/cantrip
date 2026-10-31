@@ -48,7 +48,7 @@ DEMO_MAX_ROWS = 1000
 DEMO_SESSIONS = 5000
 DEMO_ONLY = ("That's not in the demo. Run your own copy for GitHub and web spells, AI drafts and CRMs: "
              "https://github.com/cantrip-dev/cantrip")
-SOURCES = ("csv", "search", "users", "contributors", "stars", "web")
+SOURCES = ("csv", "search", "users", "contributors", "stars", "forks", "web")
 MAX_BODY = 50 * 1024 * 1024
 
 
@@ -97,6 +97,8 @@ def _leads_for(req: dict[str, Any], config=None, ai=None, search=None):
         return github.users(value.splitlines(), do_enrich=enrich)
     if source == "contributors":
         return github.contributors(value, limit=limit, do_enrich=enrich)
+    if source == "forks":
+        return github.forks(value, limit=limit, do_enrich=enrich)
     return github.stargazers(value, limit=limit, do_enrich=enrich)
 
 

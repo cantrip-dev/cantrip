@@ -10,25 +10,27 @@
       "type": "string",
       "enum": [
         "contributors-to-leads",
+        "forks-to-leads",
         "github-to-leads",
         "attendees-to-leads"
       ],
-      "description": "contributors-to-leads for a repo's contributors, github-to-leads for other GitHub people, attendees-to-leads for an event guest list"
+      "description": "contributors-to-leads for a repo's contributors, forks-to-leads for a repo's forks, github-to-leads for other GitHub people, attendees-to-leads for an event guest list"
     },
     "source": {
       "type": "string",
       "enum": [
         "stars",
         "contributors",
+        "forks",
         "search",
         "users",
         "csv"
       ],
-      "description": "stars: a repo's stargazers; contributors: a repo's contributors; search: a GitHub user search; users: logins, one per line; csv: a guest list"
+      "description": "stars: a repo's stargazers; contributors: a repo's contributors; forks: a repo's forks; search: a GitHub user search; users: logins, one per line; csv: a guest list"
     },
     "value": {
       "type": "string",
-      "description": "owner/repo for stars and contributors, a GitHub search such as 'language:python location:berlin', logins one per line, or the CSV text"
+      "description": "owner/repo for stars, contributors and forks, a GitHub search such as 'language:python location:berlin', logins one per line, or the CSV text"
     },
     "limit": {
       "type": "integer",
