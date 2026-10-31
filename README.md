@@ -143,7 +143,7 @@ cantrip init --name "Acme Vector" --pitch "a vector database that runs inside Po
   --ask "a 15-minute call" --sender Sam
 ```
 
-Four ready-made examples live in [`examples/profiles/`](examples/profiles/): a devtool startup, an event selling sponsorships, a B2B SaaS tool, and Cantrip itself (the one the demo uses). Try one with `--profile examples/profiles/devtool-startup.toml`.
+Five ready-made examples live in [`examples/profiles/`](examples/profiles/): a devtool startup, an event selling sponsorships, a B2B SaaS tool, a design and development agency, and Cantrip itself (the one the demo uses). Try one with `--profile examples/profiles/devtool-startup.toml`.
 
 To change how a spell scores or writes (the seniority ladder, the weights, the note templates), override it under `[weights]` or `[templates]` in your profile, or copy the spell's folder and edit its `spell.toml`.
 
