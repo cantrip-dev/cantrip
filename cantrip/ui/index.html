@@ -344,14 +344,21 @@ function buildSpells() {
 function pickSpell(name) {
   currentSpell = name;
   document.querySelectorAll(".choice").forEach((el) => el.classList.toggle("on", el.dataset.spell === name));
-  const kind = sourceKind();
+  const kind = sourceKind(), fixed = spellSource();
+  document.querySelectorAll("#gh-tabs button").forEach((b) => b.classList.toggle("hidden", Boolean(fixed) && b.dataset.src !== fixed));
+  if (GH[fixed]) { ghSource = fixed; buildGhInput(); }
   $("src-csv").classList.toggle("hidden", kind !== "csv");
   $("src-github").classList.toggle("hidden", kind !== "github");
   $("src-web").classList.toggle("hidden", kind !== "web");
   $("ai-drafts").checked = kind === "web";
   if (kind === "web") $("ai-settings").open = !(state.has_ai && state.has_search);
 }
+function spellSource() {
+  return state.spells.find((s) => s.name === currentSpell)?.source || "";
+}
 function sourceKind() {
+  const fixed = spellSource();
+  if (fixed) return fixed === "csv" || fixed === "web" ? fixed : "github";
   return currentSpell.startsWith("github") ? "github" : currentSpell.startsWith("web") ? "web" : "csv";
 }
 function buildGhInput() {

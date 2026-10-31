@@ -12,5 +12,6 @@ Copy a spell, change the TOML, and you have your own. Spells never send anything
 | --- | --- | --- |
 | [attendees-to-leads](attendees-to-leads/) | an event guest list (CSV) | attendees sorted by fit, with follow-up drafts |
 | [github-to-leads](github-to-leads/) | GitHub search, logins, contributors or stargazers | developers scored on their profile, with first-note drafts |
+| [contributors-to-leads](contributors-to-leads/) | a GitHub repo | its contributors ranked by commits and fit, with drafts about their work |
 
 Ideas for the next spells live in the issues. Pick one up, or propose your own.

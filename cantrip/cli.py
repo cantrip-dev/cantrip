@@ -6,6 +6,7 @@
     cantrip cast github-to-leads --search "agents language:python location:seattle"
     cantrip cast github-to-leads --users handles.txt
     cantrip cast github-to-leads --contributors owner/repo
+    cantrip cast contributors-to-leads --contributors owner/repo              # ranked by commits, drafts about their work
     cantrip cast web-to-leads --web "AI startups hiring their first DevRel"   # needs an AI model and a search key
     cantrip cast attendees-to-leads --csv guests.csv --research               # research the best leads on the web
     cantrip why-now --save                    # suggest why-now signals for your profile, checked on the web
@@ -100,6 +101,9 @@ def cast(args: argparse.Namespace) -> int:
         leads = web_source.find(ai, search, config, queries=queries, pages_per_query=args.pages, progress=_progress)
     else:
         leads = _source(args)
+    if leads is None and config.get("source") == "contributors":
+        print(f"Give the repo: cantrip cast {args.spell} --contributors owner/repo", file=sys.stderr)
+        return 2
     if leads is None:
         print("Give a source: --csv, --search, --users, --contributors, --stars or --web", file=sys.stderr)
         return 2

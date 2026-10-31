@@ -17,7 +17,7 @@ DEVTOOL = profile.apply(spell.load("github-to-leads"), profile.load(PROFILES / "
 
 
 @pytest.mark.parametrize("name", ["devtool-startup", "event-sponsorships", "b2b-saas"])
-@pytest.mark.parametrize("spell_name", ["attendees-to-leads", "github-to-leads"])
+@pytest.mark.parametrize("spell_name", ["attendees-to-leads", "github-to-leads", "contributors-to-leads"])
 def test_every_example_profile_works_with_every_spell(name, spell_name):
     config = profile.apply(spell.load(spell_name), profile.load(PROFILES / f"{name}.toml"))
     leads = [draft(score(lead, config["icp"]), config) for lead in csv_file.people(GUESTS)]
@@ -132,3 +132,32 @@ def test_csv_cells_cannot_run_as_formulas(tmp_path):
     csv_out.write([Lead(name="=HYPERLINK(\"https://evil.example\")", company="@SUM(A1)", title="CTO")], out)
     row = next(csv_file.people(out))
     assert row.name.startswith("'=") and row.company.startswith("'@") and row.title == "CTO"
+
+
+CONTRIBUTORS = profile.apply(spell.load("contributors-to-leads"), profile.load(PROFILES / "devtool-startup.toml"))
+
+
+def test_contributors_come_with_commit_counts_and_no_bots(monkeypatch):
+    page = [{"login": "ada", "type": "User", "contributions": 42}, {"login": "dependabot[bot]", "type": "Bot"},
+            {"login": "bob", "type": "User", "contributions": 1}]
+    monkeypatch.setattr(github, "_get", lambda url: page if url.endswith("&page=1") else [])
+    leads = list(github.contributors("a/b", do_enrich=False))
+    assert [(lead.github, lead.contributions) for lead in leads] == [("ada", 42), ("bob", 1)]
+    assert {lead.source for lead in leads} == {"github-contributors:a/b"}
+    assert [lead.github for lead in github.contributors("a/b", limit=2, do_enrich=False)] == ["ada", "bob"]
+
+
+def test_core_contributors_rank_higher_with_a_draft_about_their_commits():
+    core = Lead(github="ada", name="Ada Lovelace", bio="Building RAG search", top_languages=["Python"],
+                signal="contributed", source="github-contributors:a/b", contributions=42)
+    once = Lead(**{**vars(core), "github": "bob", "name": "Bob", "contributions": 1})
+    core, once = (draft(score(lead, CONTRIBUTORS["icp"]), CONTRIBUTORS) for lead in (core, once))
+    assert core.score - once.score == CONTRIBUTORS["icp"]["weights"]["core_contributor"]
+    assert "core contributor: 42 commits" in core.reasons and "1 commit" in once.reasons
+    assert "made 42 commits to a/b" in core.draft and "Acme Vector" in core.draft
+
+
+def test_contributors_spell_asks_for_the_repo(tmp_path, capsys):
+    assert main(["cast", "contributors-to-leads", "--profile", str(PROFILES / "devtool-startup.toml"),
+                 "--out", str(tmp_path / "leads.csv")]) == 2
+    assert "--contributors owner/repo" in capsys.readouterr().err

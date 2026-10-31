@@ -40,6 +40,10 @@ def _best_level(text: str, levels: list[dict[str, Any]]) -> tuple[int, str]:
     return best
 
 
+def _commits(count: int) -> str:
+    return f"{count} commit" + ("" if count == 1 else "s")
+
+
 def score(lead: Lead, icp: dict[str, Any]) -> Lead:
     points, reasons, wrong_stage = 0, [], False
     weights = icp.get("weights", {})
@@ -83,7 +87,12 @@ def score(lead: Lead, icp: dict[str, Any]) -> Lead:
         reasons.append("attended")
     elif lead.signal == "contributed":
         points += weights.get("contributed", 0)
-        reasons.append("contributed code")
+        core = icp.get("core_contributions", 0)
+        if core and lead.contributions >= core:
+            points += weights.get("core_contributor", 0)
+            reasons.append(f"core contributor: {_commits(lead.contributions)}")
+        else:
+            reasons.append(_commits(lead.contributions) if lead.contributions else "contributed code")
     elif lead.signal == "mentioned" and lead.name:
         points += weights.get("named_person", 0)
         reasons.append("named on the page")
