@@ -39,6 +39,10 @@
           "contributions": {
             "type": "string",
             "description": "commits to the repo, for contributors"
+          },
+          "fork_pushed": {
+            "type": "string",
+            "description": "the day they last pushed to their fork, for forks"
           }
         }
       }
