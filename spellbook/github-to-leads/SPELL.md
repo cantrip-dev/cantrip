@@ -1,6 +1,6 @@
 # Spell: GitHub to leads
 
-**Signal in:** developers found by their GitHub profile, in one of four ways:
+**Signal in:** developers found by their GitHub profile, in one of five ways:
 
 | Flag | Who you get |
 | --- | --- |
@@ -8,6 +8,9 @@
 | `--users handles.txt` | a list of logins or profile URLs you already have |
 | `--contributors owner/repo` | people who committed to a repo: yours, a competitor's, or a project your buyers use |
 | `--stars owner/repo` | people who starred a repo (GitHub requires a token for this) |
+| `--forks owner/repo` | people who forked a repo, newest first |
+
+The three repo sources leave out bots, organizations, AI coding agents and, when an organization owns the repo, its staff.
 
 **Out:** one row per person, filled in from their public profile (name, company, bio, location, website, followers, most-used languages), with a fit score, the reasons, and a drafted first note. Nothing is sent.
 

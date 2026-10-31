@@ -8,6 +8,8 @@ event guest list. You find who is worth writing to, and you hand a human a short
 1. Work out the spell and source from the request:
    - contributors to a repo: spell `contributors-to-leads`, source `contributors`, value `owner/repo`.
      It ranks people by how much they committed and marks core contributors.
+   - forks of a repo: spell `forks-to-leads`, source `forks`, value `owner/repo`. It ranks up the
+     people who pushed to their fork since forking: they build on the code.
    - stargazers of a repo: spell `github-to-leads`, source `stars`, value `owner/repo`. GitHub shows
      stargazers only to the repo's own admins, so this often fails; suggest the contributors instead.
    - a GitHub user search: spell `github-to-leads`, source `search`, value the search

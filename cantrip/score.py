@@ -93,6 +93,13 @@ def score(lead: Lead, icp: dict[str, Any]) -> Lead:
             reasons.append(f"core contributor: {_commits(lead.contributions)}")
         else:
             reasons.append(_commits(lead.contributions) if lead.contributions else "contributed code")
+    elif lead.signal == "forked":
+        points += weights.get("forked", 0)
+        if lead.fork_pushed:
+            points += weights.get("fork_pushed", 0)
+            reasons.append(f"pushed to their fork ({lead.fork_pushed})")
+        else:
+            reasons.append("forked the repo")
     elif lead.signal == "mentioned" and lead.name:
         points += weights.get("named_person", 0)
         reasons.append("named on the page")

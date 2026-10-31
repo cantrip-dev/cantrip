@@ -7,6 +7,7 @@
     cantrip cast github-to-leads --users handles.txt
     cantrip cast github-to-leads --contributors owner/repo
     cantrip cast contributors-to-leads --contributors owner/repo              # ranked by commits, drafts about their work
+    cantrip cast forks-to-leads --forks owner/repo                            # newest forks, ranking up the ones built on
     cantrip cast web-to-leads --web "AI startups hiring their first DevRel"   # needs an AI model and a search key
     cantrip cast attendees-to-leads --csv guests.csv --research               # research the best leads on the web
     cantrip why-now --save                    # suggest why-now signals for your profile, checked on the web
@@ -45,6 +46,8 @@ def _source(args: argparse.Namespace) -> Iterable[Lead] | None:
         return github.contributors(args.contributors, limit=args.limit, do_enrich=enrich)
     if args.stars:
         return github.stargazers(args.stars, limit=args.limit, do_enrich=enrich)
+    if args.forks:
+        return github.forks(args.forks, limit=args.limit, do_enrich=enrich)
     return None
 
 
@@ -101,11 +104,11 @@ def cast(args: argparse.Namespace) -> int:
         leads = web_source.find(ai, search, config, queries=queries, pages_per_query=args.pages, progress=_progress)
     else:
         leads = _source(args)
-    if leads is None and config.get("source") == "contributors":
-        print(f"Give the repo: cantrip cast {args.spell} --contributors owner/repo", file=sys.stderr)
+    if leads is None and config.get("source") in ("contributors", "forks"):
+        print(f"Give the repo: cantrip cast {args.spell} --{config['source']} owner/repo", file=sys.stderr)
         return 2
     if leads is None:
-        print("Give a source: --csv, --search, --users, --contributors, --stars or --web", file=sys.stderr)
+        print("Give a source: --csv, --search, --users, --contributors, --stars, --forks or --web", file=sys.stderr)
         return 2
 
     try:
@@ -282,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--users", help="text file of GitHub logins or profile URLs, one per line")
     src.add_argument("--contributors", help="GitHub repo whose contributors to read, as owner/name")
     src.add_argument("--stars", help="GitHub repo whose stargazers to read, as owner/name (needs GITHUB_TOKEN)")
+    src.add_argument("--forks", help="GitHub repo whose forks to read, as owner/name")
     src.add_argument("--web", nargs="?", const="", metavar="BRIEF",
                      help="search the web for leads that fit your profile; add a brief to steer it (web-to-leads)")
     p.add_argument("--queries", type=int, default=8, help="web searches to run (default 8)")

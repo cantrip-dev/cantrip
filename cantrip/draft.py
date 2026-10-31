@@ -17,6 +17,7 @@ SIGNAL_PHRASES = {
     "attended": "came to {event}",
     "contributed": "contributed to {origin}",
     "starred": "starred {origin}",
+    "forked": "forked {origin}",
     "found": "build with {topic}",
     "mentioned": "came up on {page}",
 }
@@ -35,6 +36,8 @@ def _context(lead: Lead, spell: dict[str, Any]) -> dict[str, str]:
         topic=", ".join(lead.top_languages[:2]) or "open source")
     if lead.signal == "contributed" and lead.contributions:
         phrase = f"made {lead.contributions} commit{'' if lead.contributions == 1 else 's'} to {origin}"
+    if lead.signal == "forked" and lead.fork_pushed:
+        phrase = f"forked {origin} and pushed to your copy since"
     return {
         "first_name": lead.first_name,
         "company": lead.company or "your team",
