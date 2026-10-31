@@ -33,6 +33,8 @@ def _context(lead: Lead, spell: dict[str, Any]) -> dict[str, str]:
     phrase = SIGNAL_PHRASES.get(lead.signal, "{origin}").format(
         origin=origin, event=spell.get("event_name") or "the event", page=_site(lead.source_url),
         topic=", ".join(lead.top_languages[:2]) or "open source")
+    if lead.signal == "contributed" and lead.contributions:
+        phrase = f"made {lead.contributions} commit{'' if lead.contributions == 1 else 's'} to {origin}"
     return {
         "first_name": lead.first_name,
         "company": lead.company or "your team",

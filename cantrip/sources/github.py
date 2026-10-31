@@ -19,6 +19,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Iterable, Iterator
+from itertools import islice
 
 from cantrip.lead import Lead
 
@@ -96,9 +97,13 @@ def users(values: Iterable[str], do_enrich: bool = True) -> Iterator[Lead]:
 
 
 def contributors(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:
-    people = _paged(f"{API}/repos/{repo}/contributors", limit)
-    yield from _people((u["login"] for u in people if u.get("type") == "User"), f"github-contributors:{repo}",
-                       "contributed", do_enrich)
+    """Most commits first, as GitHub lists them, each with their commit count. Bots are skipped and don't count
+    toward `limit`."""
+    people = (p for p in _paged(f"{API}/repos/{repo}/contributors", 10_000) if p.get("type") == "User")
+    for person in islice(people, limit):
+        lead = Lead(github=person["login"], source=f"github-contributors:{repo}", signal="contributed",
+                    contributions=person.get("contributions") or 0)
+        yield enrich(lead) if do_enrich else lead
 
 
 def stargazers(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:

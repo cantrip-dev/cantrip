@@ -57,7 +57,8 @@ def _spells() -> list[dict[str, str]]:
     for folder in sorted(spell.SPELLBOOK.iterdir()):
         toml = folder / "spell.toml"
         if toml.exists():
-            found.append({"name": folder.name, "about": spell.load(str(folder)).get("about", "")})
+            config = spell.load(str(folder))
+            found.append({"name": folder.name, "about": config.get("about", ""), "source": config.get("source", "")})
     return found
 
 

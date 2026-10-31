@@ -1,0 +1,70 @@
+# contributors-to-leads: the people who commit to a repo (yours, a competitor's,
+# or a project your buyers build on), ranked by how much they put in, scored
+# against your ICP, with a first note about the work they did.
+#
+# What you sell and who you sell to come from your profile (cantrip.toml,
+# made by `cantrip init`). This file only holds how the spell scores and writes.
+
+about = "Turn a repo's contributors into leads, ranked by how much they committed, with drafts about their work."
+source = "contributors"  # the app opens this spell on a repo box
+
+[icp]
+core_contributions = 10     # commits that make someone a core contributor
+influencer_followers = 500  # followers that count as influence
+
+# Seniority ladder, read from job titles and bios. The highest matching level counts.
+# Your profile's `seniority` setting scales these points (high, normal, low, ignore).
+[[icp.seniority]]
+points = 30
+words = ["founder", "co-founder", "cofounder", "ceo", "cto", "cmo", "chief", "owner", "president"]
+[[icp.seniority]]
+points = 25
+words = ["vp", "vice president", "head of", "director", "general manager", "gm"]
+[[icp.seniority]]
+points = 15
+words = ["lead", "principal", "staff", "manager", "maintainer"]
+[[icp.seniority]]
+points = 5
+words = ["senior", "sr"]
+
+[icp.weights]
+contributed = 10         # committed to the repo you read
+core_contributor = 15    # on top: at least core_contributions commits
+has_company = 10
+target_company = 35
+keyword = 15
+language = 10            # one of their most-used languages is in your list
+influence = 10           # at least influencer_followers followers
+work_email = 10
+reachable = 5            # public email, website or blog on the profile
+deprioritize = -20
+
+[icp.tiers]
+hot = 60
+warm = 30
+
+# Templates per tier. Fields: {first_name} {company} {title} {event} {signal} {reason}
+# {product} {pitch} {product_line} ("product, pitch") {ask} {sender}. Here {signal} reads
+# like "made 42 commits to owner/repo". Override any of them in your profile under [templates].
+[templates]
+hot = """
+Hi {first_name},
+
+I saw you've {signal}. I'm working on {product_line}, and someone who knows that codebase as well as you do is exactly whose take I'd value.
+
+Would you be open to {ask}?
+
+{sender}
+"""
+warm = """
+Hi {first_name},
+
+I saw you've {signal}, and wanted to share {product_line}. I'd love to hear whether it's useful for work like yours.
+
+{sender}
+"""
+default = """
+Hi {first_name}, thanks for your work on open source. I wanted to share {product_line}; if it sounds useful, I'd love your feedback.
+
+{sender}
+"""

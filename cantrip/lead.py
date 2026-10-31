@@ -34,6 +34,7 @@ class Lead:
     followers: int = 0
     public_repos: int = 0
     top_languages: list[str] = field(default_factory=list)
+    contributions: int = 0  # commits to the repo they came from, for a repo's contributors
     # Filled in by the cantrip
     score: int = 0
     tier: str = ""
