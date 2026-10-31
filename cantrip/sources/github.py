@@ -3,7 +3,7 @@
 Four ways in, all through GitHub's public API:
 - `search`: GitHub's user search ("language:python location:seattle agents")
 - `users`: a list of logins or profile URLs you already have
-- `contributors`: people who committed to a repo, leaving out bots, AI coding agents and the repo owner's own team
+- `contributors`: people who committed to a repo, leaving out bots, AI coding agents and the repo owner's own staff
 - `stargazers`: people who starred a repo (GitHub requires GITHUB_TOKEN for this)
 
 Each person is filled in from their public profile. Set GITHUB_TOKEN for
@@ -109,6 +109,16 @@ def _company_keys(text: str) -> set[str]:
     return {k for k in keys if len(k) >= 3}
 
 
+def works_at(lead: Lead, team: set[str]) -> bool:
+    """Whether a lead's profile ties them to the company `team` names: their company, their email's or website's
+    domain, an @mention in their bio ("Engineer @snyk"), or their login ("hemang-snyk")."""
+    if not team:
+        return False
+    places = [lead.company, lead.email.rsplit("@", 1)[-1] if "@" in lead.email else "", lead.website,
+              *re.findall(r"(?<![\w.])@([A-Za-z0-9-]+)", lead.bio), *re.split(r"[-_]", lead.github)]
+    return any(team & _company_keys(place) for place in places)
+
+
 def _owner_company(repo: str) -> set[str]:
     """The company behind a repo owned by an organization; nothing for a personal repo."""
     owner = _get(f"{API}/users/{repo.split('/')[0]}")
@@ -132,7 +142,7 @@ def contributors(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterato
                     contributions=person.get("contributions") or 0)
         if do_enrich:
             enrich(lead)
-            if team & _company_keys(lead.company):
+            if works_at(lead, team):
                 continue
         found += 1
         yield lead

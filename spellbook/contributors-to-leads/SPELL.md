@@ -2,8 +2,10 @@
 
 **Signal in:** a GitHub repo, as `owner/name`. Cantrip reads the people who committed to it, most commits first, with
 each person's commit count. It leaves out bots, AI coding agents that GitHub lists as users (Cursor Agent,
-Claude, Codex...), and, when an organization owns the repo, people whose profile names that company: they're
-its team, not leads. People who leave their company blank can't be told apart, so check the shortlist.
+Claude, Codex...), and, when an organization owns the repo, its staff: people whose company, email or website
+domain, bio @mention or login ("jane-acme") names that company. Staff of a company it bought, or people who
+show nothing on their profile, can't be told apart: check the shortlist and mark them **No** (they go under
+`[skip]` in the profile and never come back).
 
 Good repos to read:
 - **Yours:** the people who already improved your project are your likeliest champions.
