@@ -97,7 +97,9 @@ docker compose up -d      # the app is on port 8765; your profile lives in a Doc
 CANTRIP_PASSWORD='a long passphrase' cantrip ui --host 0.0.0.0 --port 8765 --no-browser
 ```
 
-Hosting platforms that build from a Dockerfile (Render, Railway, Fly.io, Google Cloud Run...) work as they are: Cantrip listens on their `PORT`, answers their health check at `/healthz`, and reads its settings from their environment variables. Keep the profile on a persistent disk mounted at `/data`, or it resets when the app restarts.
+**On Render, in one click:** [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/cantrip-dev/cantrip) Render builds the image, generates a strong `CANTRIP_PASSWORD` (find it under the service's **Environment** tab) and keeps your profile on a 1 GB disk, which needs a paid instance ([render.yaml](render.yaml)). On a free instance, skip the disk and add your profile as a [secret file](https://render.com/docs/configure-environment-variables#secret-files) named `cantrip.toml`, with `CANTRIP_PROFILE=/etc/secrets/cantrip.toml`; edit it there, since the app can't save to it.
+
+Other hosting platforms that build from a Dockerfile (Railway, Fly.io, Google Cloud Run...) work as they are: Cantrip listens on their `PORT`, answers their health check at `/healthz`, and reads its settings from their environment variables. Keep the profile on a persistent disk mounted at `/data`, or it resets when the app restarts.
 
 | Setting | What it does |
 | --- | --- |
@@ -179,6 +181,8 @@ Cantrip would rather hand you ten leads worth writing to than a hundred names:
 
 Every spell has a `SPELL.md`, the same workflow written as steps an agent can follow: interview the person for their profile if there isn't one, run the CLI, check the scoring, shortlist the best leads, read their public work, rewrite each note around one true, specific detail, and hand the drafts back to a human. Point your agent at the file and say "cast this spell".
 
+**[Cantrip Familiar](familiar/)** runs that workflow on its own, every morning, as a [Guild](https://www.guild.ai/) agent: it casts a spell on your deployed Cantrip, reads the best leads' public GitHub, and leaves you a digest of drafts. It has no tool that can send, and Guild's credential rules keep it read-only.
+
 ## Principles
 
 - **Drafts, not sends.** A human approves every message.
@@ -193,7 +197,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). We use DCO sign-off (`git commit -s`).
 
 ## Security
 
-Cantrip runs on your computer with your own keys. To report a security problem, see [SECURITY.md](SECURITY.md).
+Cantrip runs on your computer with your own keys. It has no dependencies, so there's no third-party package to compromise, and [Snyk](https://snyk.io/) scans its code and Docker image on every change. To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## License
 

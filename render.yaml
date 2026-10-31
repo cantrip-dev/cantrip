@@ -1,0 +1,19 @@
+# Deploy Cantrip on Render: https://render.com/deploy?repo=https://github.com/cantrip-dev/cantrip
+# Render builds the Dockerfile, generates a password, and keeps your profile on a small disk.
+# A disk needs a paid instance; see the README's "Deploy it" for the free option.
+services:
+  - type: web
+    name: cantrip
+    runtime: docker
+    plan: 0.5c-512mb
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    disk:
+      name: cantrip-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: CANTRIP_PASSWORD  # random 256-bit value; read it under the service's Environment tab
+        generateValue: true
+      - key: GITHUB_TOKEN      # optional: 5,000 GitHub lookups an hour, and needed for stargazers
+        sync: false

@@ -1,0 +1,51 @@
+{
+  "type": "object",
+  "required": [
+    "spell",
+    "source",
+    "value"
+  ],
+  "properties": {
+    "spell": {
+      "type": "string",
+      "enum": [
+        "contributors-to-leads",
+        "github-to-leads",
+        "attendees-to-leads"
+      ],
+      "description": "contributors-to-leads for a repo's contributors, github-to-leads for other GitHub people, attendees-to-leads for an event guest list"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "stars",
+        "contributors",
+        "search",
+        "users",
+        "csv"
+      ],
+      "description": "stars: a repo's stargazers; contributors: a repo's contributors; search: a GitHub user search; users: logins, one per line; csv: a guest list"
+    },
+    "value": {
+      "type": "string",
+      "description": "owner/repo for stars and contributors, a GitHub search such as 'language:python location:berlin', logins one per line, or the CSV text"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Most people to look at (default 50)"
+    },
+    "min_tier": {
+      "type": "string",
+      "enum": [
+        "hot",
+        "warm",
+        "cold"
+      ],
+      "description": "Leave out leads below this tier (default cold)"
+    },
+    "event": {
+      "type": "string",
+      "description": "The event's name, for guest lists"
+    }
+  }
+}

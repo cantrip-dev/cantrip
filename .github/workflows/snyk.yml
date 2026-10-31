@@ -1,0 +1,32 @@
+name: snyk
+# Snyk scans the code and the Docker image. Cantrip has no dependencies, so there is no
+# third-party package to scan; what's left is our own code and the base image.
+# Needs a SNYK_TOKEN repository secret; without it (forks, outside pull requests) the scan is skipped.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 15 * * 1"  # Mondays, for new findings in the base image
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip without a Snyk token
+        if: env.SNYK_TOKEN == ''
+        run: echo "No SNYK_TOKEN secret here, so the Snyk scan is skipped."
+      - uses: snyk/actions/setup@9adf32b1121593767fc3c057af55b55db032dc04  # v1.0.0
+        if: env.SNYK_TOKEN != ''
+      - name: Our code (Snyk Code)
+        if: env.SNYK_TOKEN != ''
+        run: snyk code test --severity-threshold=medium
+      - name: The Docker image (Snyk Container)
+        if: env.SNYK_TOKEN != ''
+        run: |
+          docker build -t cantrip .
+          snyk container test cantrip --file=Dockerfile --severity-threshold=high

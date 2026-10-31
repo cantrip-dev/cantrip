@@ -1,0 +1,53 @@
+{
+  "type": "object",
+  "properties": {
+    "summary": {
+      "type": "string"
+    },
+    "leads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "github": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "score": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string"
+          },
+          "reasons": {
+            "type": "string"
+          },
+          "draft": {
+            "type": "string"
+          },
+          "contributions": {
+            "type": "string",
+            "description": "commits to the repo, for contributors"
+          }
+        }
+      }
+    },
+    "usage": {
+      "type": "string"
+    },
+    "error": {
+      "type": "string"
+    }
+  }
+}
