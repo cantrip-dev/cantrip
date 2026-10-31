@@ -3,7 +3,7 @@
 Four ways in, all through GitHub's public API:
 - `search`: GitHub's user search ("language:python location:seattle agents")
 - `users`: a list of logins or profile URLs you already have
-- `contributors`: people who committed to a repo
+- `contributors`: people who committed to a repo, leaving out bots, AI coding agents and the repo owner's own team
 - `stargazers`: people who starred a repo (GitHub requires GITHUB_TOKEN for this)
 
 Each person is filled in from their public profile. Set GITHUB_TOKEN for
@@ -19,7 +19,6 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Iterable, Iterator
-from itertools import islice
 
 from cantrip.lead import Lead
 
@@ -96,14 +95,47 @@ def users(values: Iterable[str], do_enrich: bool = True) -> Iterator[Lead]:
     yield from _people(logins, "github-list", "found", do_enrich)
 
 
+# AI coding agents that GitHub lists as users rather than bots, so their commits look like a person's.
+AI_AGENTS = {"claude", "codex", "copilot-swe-agent", "cursoragent", "openhands-agent"}
+
+_COMPANY_SUFFIXES = ("inc", "ltd", "llc", "gmbh", "corp", "hq", "oss", "labs", "ai", "io", "dev", "app", "team")
+
+
+def _company_keys(text: str) -> set[str]:
+    """Ways a company's name is written, boiled down: "@renderinc", "render.com", "Render OSS" -> {"render", ...}."""
+    text = re.sub(r"^https?://(www\.)?", "", (text or "").strip().lower()).lstrip("@").split("/")[0]
+    key = re.sub(r"[^a-z0-9]", "", re.sub(r"\.(com|io|ai|dev|co|org|net|app|sh)$", "", text))
+    keys = {key} | {key[: -len(s)] for s in _COMPANY_SUFFIXES if key.endswith(s)}
+    return {k for k in keys if len(k) >= 3}
+
+
+def _owner_company(repo: str) -> set[str]:
+    """The company behind a repo owned by an organization; nothing for a personal repo."""
+    owner = _get(f"{API}/users/{repo.split('/')[0]}")
+    if owner.get("type") != "Organization":
+        return set()
+    return set().union(*(_company_keys(owner.get(k) or "") for k in ("login", "name", "blog")))
+
+
 def contributors(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:
-    """Most commits first, as GitHub lists them, each with their commit count. Bots are skipped and don't count
-    toward `limit`."""
-    people = (p for p in _paged(f"{API}/repos/{repo}/contributors", 10_000) if p.get("type") == "User")
-    for person in islice(people, limit):
+    """Most commits first, as GitHub lists them, each with their commit count. Skipped, and not counted toward
+    `limit`: bots, AI coding agents, and (once their profile is read) people who work at the company that owns
+    the repo, who are its team rather than leads."""
+    team = _owner_company(repo) if do_enrich else set()
+    people = (p for p in _paged(f"{API}/repos/{repo}/contributors", 10_000)
+              if p.get("type") == "User" and p["login"].lower() not in AI_AGENTS)
+    found = 0
+    for person in people:
+        if found >= limit:
+            return
         lead = Lead(github=person["login"], source=f"github-contributors:{repo}", signal="contributed",
                     contributions=person.get("contributions") or 0)
-        yield enrich(lead) if do_enrich else lead
+        if do_enrich:
+            enrich(lead)
+            if team & _company_keys(lead.company):
+                continue
+        found += 1
+        yield lead
 
 
 def stargazers(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:

@@ -139,12 +139,43 @@ CONTRIBUTORS = profile.apply(spell.load("contributors-to-leads"), profile.load(P
 
 def test_contributors_come_with_commit_counts_and_no_bots(monkeypatch):
     page = [{"login": "ada", "type": "User", "contributions": 42}, {"login": "dependabot[bot]", "type": "Bot"},
-            {"login": "bob", "type": "User", "contributions": 1}]
+            {"login": "CursorAgent", "type": "User", "contributions": 30}, {"login": "bob", "type": "User", "contributions": 1}]
     monkeypatch.setattr(github, "_get", lambda url: page if url.endswith("&page=1") else [])
     leads = list(github.contributors("a/b", do_enrich=False))
     assert [(lead.github, lead.contributions) for lead in leads] == [("ada", 42), ("bob", 1)]
     assert {lead.source for lead in leads} == {"github-contributors:a/b"}
     assert [lead.github for lead in github.contributors("a/b", limit=2, do_enrich=False)] == ["ada", "bob"]
+
+
+def _fake_github(monkeypatch, owner, companies):
+    """A repo owned by `owner` (a dict like GitHub's /users answer) whose contributors work at `companies`."""
+    page = [{"login": login, "type": "User", "contributions": 5} for login in companies]
+
+    def get(url):
+        if url.endswith("&page=1"):
+            return page
+        if "/contributors" in url:
+            return []
+        return owner
+
+    monkeypatch.setattr(github, "_get", get)
+    monkeypatch.setattr(github, "enrich", lambda lead: setattr(lead, "company", companies[lead.github]) or lead)
+
+
+def test_contributors_skip_the_team_of_the_company_that_owns_the_repo(monkeypatch):
+    render = {"login": "render-oss", "type": "Organization", "name": "Render OSS", "blog": "https://render.com"}
+    _fake_github(monkeypatch, render, {"staff1": "@renderinc", "staff2": "render.com", "staff3": "Render",
+                                       "guest": "Acme", "gone": "", "near": "Renderforest"})
+    assert [lead.github for lead in github.contributors("render-oss/render-mcp-server")] == ["guest", "gone", "near"]
+    assert [lead.github for lead in github.contributors("render-oss/render-mcp-server", limit=1)] == ["guest"]
+    guild = {"login": "guildai", "type": "Organization", "name": "Guild AI", "blog": "https://guild.ai"}
+    _fake_github(monkeypatch, guild, {"staff": "Guild.ai", "guest": "nubank"})
+    assert [lead.github for lead in github.contributors("guildai/guildai")] == ["guest"]
+
+
+def test_a_personal_repo_keeps_everyone(monkeypatch):
+    _fake_github(monkeypatch, {"login": "ada", "type": "User", "company": "Acme"}, {"bob": "Acme", "cy": "Ada"})
+    assert [lead.github for lead in github.contributors("ada/tool")] == ["bob", "cy"]
 
 
 def test_core_contributors_rank_higher_with_a_draft_about_their_commits():

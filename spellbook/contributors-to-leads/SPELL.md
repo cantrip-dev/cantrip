@@ -1,7 +1,9 @@
 # Spell: contributors to leads
 
 **Signal in:** a GitHub repo, as `owner/name`. Cantrip reads the people who committed to it, most commits first, with
-each person's commit count. Bots are skipped.
+each person's commit count. It leaves out bots, AI coding agents that GitHub lists as users (Cursor Agent,
+Claude, Codex...), and, when an organization owns the repo, people whose profile names that company: they're
+its team, not leads. People who leave their company blank can't be told apart, so check the shortlist.
 
 Good repos to read:
 - **Yours:** the people who already improved your project are your likeliest champions.
@@ -23,7 +25,7 @@ Every run scores against the person's profile, `cantrip.toml`. If there isn't on
 
 Then save their answers with `cantrip init --name ... --pitch ... --buyer-roles ... --champion-roles ... --target-companies ... --exclude ... --ask ... --sender ...`. Fill in fit keywords and languages from what they told you and show them the file. Never guess what they sell.
 
-When the repo is their own, add their company to `exclude` so their own team doesn't show up as leads.
+When the repo is their own, add their company to `exclude` too, so their team doesn't show up from other repos.
 
 ## Run it
 
