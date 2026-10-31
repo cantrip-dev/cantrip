@@ -72,6 +72,7 @@ guild trigger create --workspace ACCOUNT~cantrip-familiar --type time --agent AC
   --input '{"text":"Scout the contributors to OWNER/REPO and give me the digest."}'
 ```
 
+One trigger can name several repos ("Scout the contributors to a/b, c/d and e/f"); the digest gets a section for each.
 Each morning's digest is a session in that workspace. To try it now, open the workspace's **Chat**,
 `@`-mention the Familiar, and ask it to scout a repo or paste a guest list.
 
