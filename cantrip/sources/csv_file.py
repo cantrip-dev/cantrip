@@ -1,4 +1,8 @@
-"""People from a CSV export: a Luma guest list, a registration form, a meetup list.
+"""People from a CSV export: a Luma guest list, a registration form, an Eventbrite or Meetup list.
+
+Eventbrite and Meetup put the first and last name in separate columns, sometimes
+with different capitalisation ("First name", "Last Name"), so those are joined here.
+Luma keeps a single `name` column.
 
 Columns are matched by name, loosely, so most exports work as they are:
 any column with "company" or "organization" in its header is the company,
@@ -65,8 +69,11 @@ def _read(reader: csv.DictReader, source: str, signal: str) -> Iterator[Lead]:
     for row in reader:
         values = {field: (row.get(header) or "").strip() for field, header in columns.items()}
         if not values.get("name"):
-            first = (row.get("first_name") or row.get("First Name") or "").strip()
-            last = (row.get("last_name") or row.get("Last Name") or "").strip()
+            lowered = {str(key).strip().lower(): value for key, value in row.items() if key}
+            first = next((lowered[key] for key in ("first_name", "first name", "firstname", "given name")
+                          if lowered.get(key)), "").strip()
+            last = next((lowered[key] for key in ("last_name", "last name", "lastname", "surname")
+                         if lowered.get(key)), "").strip()
             values["name"] = f"{first} {last}".strip()
         lead = Lead(source=source, signal=signal)
         for field in ("name", "email", "company", "title", "linkedin", "location", "website"):

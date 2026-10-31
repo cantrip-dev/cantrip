@@ -68,6 +68,20 @@ def test_csv_reads_luma_export_with_custom_questions():
     assert ada.signal == "attended" and leads[1].signal == "registered"
 
 
+def test_csv_reads_eventbrite_export():
+    leads = list(csv_file.people(ROOT / "examples" / "eventbrite-attendees.csv"))
+    nadia = leads[0]
+    assert (nadia.name, nadia.email, nadia.company, nadia.title) == (
+        "Nadia Example", "nadia@examplelabs.example", "Example Labs", "VP Engineering")
+    assert nadia.source == "csv:eventbrite-attendees"
+
+
+def test_csv_reads_meetup_export_with_lowercase_name_columns():
+    leads = list(csv_file.people(ROOT / "examples" / "meetup-members.csv"))
+    assert [lead.name for lead in leads] == ["Mira Example", "Ken Sample"]
+    assert leads[0].company == "Example Labs"
+
+
 def test_attendee_scoring_reasons():
     ada, grace, linus, ming = (score(lead, SPONSORS["icp"]) for lead in list(csv_file.people(GUESTS))[:4])
     assert ada.tier == "hot" and "role: developer relations" in ada.reasons
