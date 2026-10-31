@@ -222,7 +222,7 @@ class Handler(BaseHTTPRequestHandler):
             req = json.loads(self.rfile.read(length) or b"{}")
         except json.JSONDecodeError:
             return self._json({"error": "Bad request."}, 400)
-        if self.demo and self.path in ("/api/why-now", "/api/crm"):
+        if self.demo and self.path in ("/api/why-now", "/api/crm", "/api/no"):
             return self._json({"error": DEMO_ONLY}, 403)
         if self.path == "/api/profile":
             return self._save_profile(req)
@@ -232,6 +232,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._why_now(req)
         if self.path == "/api/crm":
             return self._crm(req)
+        if self.path == "/api/no":
+            return self._say_no(req)
         self._send(404, b"Not found", "text/plain")
 
     # ---- the public demo ----
@@ -350,6 +352,22 @@ class Handler(BaseHTTPRequestHandler):
         if not self.demo:
             Handler.last_results = results
         self._json({"leads": [lead.to_row() for lead in results], "summary": summary(results), "usage": usage})
+
+    def _say_no(self, req: dict[str, Any]) -> None:
+        """Mark a person as a no: they're added to the profile's [skip] list and left out of every later run."""
+        who = str(req.get("who") or "").strip()
+        if not who or len(who) > 200 or "\n" in who:
+            return self._json({"error": "Say who: a GitHub login, an email or a LinkedIn link."}, 400)
+        try:
+            people = profile.say_no(who, self.profile_path)
+        except profile.ProfileMissing:
+            return self._json({"error": "Set up your profile first."}, 400)
+        except OSError:
+            return self._json({"error": f"This copy can't save its profile (on Render's free plan it's a secret "
+                                        f"file). To keep them out, add \"{who}\" to people under [skip] in "
+                                        f"cantrip.toml there.", "readonly": True}, 409)
+        Handler.last_results = [lead for lead in self.last_results if not engine.said_no(lead, [who])]
+        self._json({"ok": True, "people": people})
 
     def _why_now(self, req: dict[str, Any]) -> None:
         try:

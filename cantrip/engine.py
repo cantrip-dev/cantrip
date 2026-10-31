@@ -23,11 +23,20 @@ def unique(leads: Iterable[Lead]) -> Iterator[Lead]:
         yield lead
 
 
+def said_no(lead: Lead, people: list[str]) -> bool:
+    """Whether the person is on the profile's [skip] list, by GitHub login, email or LinkedIn link."""
+    mine = {github.login_from(p).lower() for p in people} | {p.strip().lower().rstrip("/") for p in people}
+    return bool(mine & {lead.github.lower(), lead.email.lower(), lead.linkedin.lower().rstrip("/")} - {""})
+
+
 def run(config: dict[str, Any], leads: Iterable[Lead], add_github: bool = False,
         min_tier: str = "cold") -> list[Lead]:
-    """Score and draft every lead, best first. Raises urllib.error.HTTPError if GitHub refuses."""
+    """Score and draft every lead, best first, leaving out anyone you said no to.
+    Raises urllib.error.HTTPError if GitHub refuses."""
     results = []
     for lead in unique(leads):
+        if said_no(lead, config.get("skip_people", [])):
+            continue
         if add_github and lead.github and not lead.followers:
             github.enrich(lead)
         results.append(draft(score(lead, config.get("icp", {})), config))

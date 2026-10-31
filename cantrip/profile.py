@@ -61,6 +61,7 @@ def apply(spell: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
     icp["seniority"] = [dict(level, points=round(level["points"] * scale)) for level in icp.get("seniority", [])
                         if scale]
 
+    config["skip_people"] = list(profile.get("skip", {}).get("people", []))
     icp.setdefault("weights", {}).update(profile.get("weights", {}))
     config.setdefault("templates", {}).update(profile.get("templates", {}))
     return config
@@ -125,12 +126,14 @@ def _table(name: str, values: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def update(answers: dict[str, Any], path: str | Path = DEFAULT_PATH) -> Path:
-    """Rewrite the product and ICP, keeping any [weights] or [templates] you added by hand."""
+def update(answers: dict[str, Any], path: str | Path = DEFAULT_PATH, tables: dict[str, dict] | None = None) -> Path:
+    """Rewrite the product and ICP, keeping any [weights], [templates] or [skip] you added by hand.
+    `tables` replaces those tables by name."""
     path = Path(path)
     kept = {}
     if path.exists():
         kept = {k: v for k, v in load(path).items() if k not in ("product", "icp") and isinstance(v, dict)}
+    kept.update(tables or {})
     written = init(answers, path, interactive=False)
     if kept:
         written.write_text(written.read_text() + "\n" + "\n\n".join(_table(k, v) for k, v in kept.items()) + "\n")
@@ -160,6 +163,18 @@ def init(answers: dict[str, Any], path: str | Path = DEFAULT_PATH, ask=input, in
     path.write_text(render(answers))
     load(path)  # make sure it reads back
     return path
+
+
+def say_no(who: str, path: str | Path = DEFAULT_PATH) -> list[str]:
+    """Add a person (GitHub login, email or LinkedIn link) to the profile's [skip] list, so no spell shows them
+    again. Raises OSError when the profile can't be written, such as a read-only secret file."""
+    mine = load(path)
+    people = list(mine.get("skip", {}).get("people", []))
+    if who.strip().lower() not in {p.lower() for p in people}:
+        people.append(who.strip())
+    answers = {**mine.get("product", {}), **mine.get("icp", {})}
+    update(answers, path, tables={"skip": {**mine.get("skip", {}), "people": people}})
+    return people
 
 
 def slug(text: str) -> str:

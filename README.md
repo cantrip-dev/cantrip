@@ -147,6 +147,15 @@ Four ready-made examples live in [`examples/profiles/`](examples/profiles/): a d
 
 To change how a spell scores or writes (the seniority ladder, the weights, the note templates), override it under `[weights]` or `[templates]` in your profile, or copy the spell's folder and edit its `spell.toml`.
 
+**Saying no to someone.** Press **No** on a lead in the app and they're left out of every run from then on. Cantrip keeps them in your profile, by GitHub login, email or LinkedIn link:
+
+```toml
+[skip]
+people = ["octocat", "sam@example.com", "https://www.linkedin.com/in/someone"]
+```
+
+Where the app can't save the profile (Render's free plan keeps it in a read-only secret file), it tells you the line to add there instead.
+
 ## Send leads to your CRM
 
 Cantrip always writes a CSV. Add `--to` and it also puts the leads in a CRM, or in the app press **Add to CRM** under your results:

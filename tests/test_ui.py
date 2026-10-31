@@ -139,3 +139,23 @@ def test_demo_gives_each_visitor_a_profile_and_keeps_nothing(ui, tmp_path):
     for path in ("/api/why-now", "/api/crm"):
         assert demo_call(ui + path, {}, me)[0] == 403
     assert call(ui + "/api/health")[0] == 200
+
+
+def test_marking_a_lead_no_keeps_them_out_of_later_runs(ui):
+    call(ui + "/api/profile", {"name": "Acme", "pitch": "a thing", "buyer_roles": "cto, devrel"})
+    first = json.loads(call(ui + "/api/run", {"spell": "attendees-to-leads", "source": "csv", "value": GUESTS})[1])["leads"]
+    status, body = call(ui + "/api/no", {"who": first[0]["email"]})
+    assert status == 200 and json.loads(body)["people"] == [first[0]["email"]]
+    again = json.loads(call(ui + "/api/run", {"spell": "attendees-to-leads", "source": "csv", "value": GUESTS})[1])["leads"]
+    assert first[0]["email"] not in {lead["email"] for lead in again} and len(again) == len(first) - 1
+    assert call(ui + "/api/no", {"who": ""})[0] == 400
+
+
+def test_a_read_only_profile_says_how_to_add_the_no_by_hand(ui):
+    call(ui + "/api/profile", {"name": "Acme", "pitch": "a thing", "buyer_roles": "cto"})
+    Handler.profile_path.chmod(0o444)
+    try:
+        status, body = call(ui + "/api/no", {"who": "ada"})
+    finally:
+        Handler.profile_path.chmod(0o644)
+    assert status == 409 and "[skip]" in json.loads(body)["error"] and json.loads(body)["readonly"]

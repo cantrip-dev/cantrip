@@ -36,6 +36,7 @@
   button.primary { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 600; padding: 10px 18px; }
   button.primary:disabled { opacity: .6; cursor: wait; }
   button.link { border: none; background: none; color: var(--brand); padding: 0; font-weight: 600; }
+  button.link.no { margin-left: 12px; color: var(--muted); font-weight: 500; }
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .actions { margin-top: 18px; }
   .msg { font-size: 14px; }
@@ -425,6 +426,7 @@ function renderResults(summary) {
   document.querySelectorAll(".stat").forEach((el) => el.onclick = () => { tierFilter = el.dataset.tier; renderResults(summary); });
   const multi = (summary.split("\n").find((l) => l.startsWith("Companies with")) || "");
   $("companies").textContent = multi;
+  $("companies").dataset.summary = summary;
   renderRows();
 }
 function renderRows() {
@@ -446,9 +448,19 @@ function renderRows() {
         ${l.evidence ? `<div class="evidence">“${esc(l.evidence)}”</div>` : ""}
         ${l.research ? `<div class="evidence hidden" id="r${i}">${esc(l.research)}</div>` : ""}</td>
       <td class="reasons hide-sm">${esc(l.reasons)}</td><td class="links hide-sm">${links}</td>
-      <td><button class="link" data-i="${i}">Draft</button></td></tr>`;
+      <td><button class="link" data-i="${i}">Draft</button><button class="link no" data-no="${i}" title="Never show this person again">No</button></td></tr>`;
   }).join("") || `<tr><td colspan="5" class="reasons">No one matches.</td></tr>`;
-  document.querySelectorAll("#rows button.link").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("#rows button.no").forEach((b) => b.onclick = async () => {
+    const l = shown[b.dataset.no], who = l.github || l.email || l.linkedin;
+    if (!who) { $("run-msg").className = "msg err"; $("run-msg").textContent = "This lead has no GitHub, email or LinkedIn to remember them by."; return; }
+    if (!confirm(`Mark ${l.name || who} as a no? They won't show up in any run again (you can undo it in your profile, under [skip]).`)) return;
+    try {
+      await api("api/no", {who});
+      leads = leads.filter((x) => x !== l);
+      renderResults($("companies").dataset.summary || "");
+    } catch (err) { alert(err.message); }
+  });
+  document.querySelectorAll("#rows button.link:not(.no)").forEach((b) => b.onclick = () => {
     const d = $("d" + b.dataset.i);
     if (d.classList.contains("hidden")) { d.classList.remove("hidden"); $("r" + b.dataset.i)?.classList.remove("hidden"); b.textContent = "Copy"; }
     else { navigator.clipboard.writeText(d.textContent); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1500); }

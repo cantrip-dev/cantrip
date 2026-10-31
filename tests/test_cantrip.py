@@ -192,3 +192,31 @@ def test_contributors_spell_asks_for_the_repo(tmp_path, capsys):
     assert main(["cast", "contributors-to-leads", "--profile", str(PROFILES / "devtool-startup.toml"),
                  "--out", str(tmp_path / "leads.csv")]) == 2
     assert "--contributors owner/repo" in capsys.readouterr().err
+
+
+def test_staff_show_up_by_email_website_bio_or_login():
+    snyk = {"snyk"}
+    staff = [Lead(github="m", email="matteo@snyk.io"), Lead(github="w", website="https://snyk.io"),
+             Lead(github="b", bio="Engineer @snyk"), Lead(github="hemang-snyk")]
+    others = [Lead(github="a", email="a@gmail.com", bio="mail me at a@snyk.io"), Lead(github="snyker"),
+              Lead(github="c", company="Acme", bio="DevRel @acme")]
+    assert all(github.works_at(lead, snyk) for lead in staff)
+    assert not any(github.works_at(lead, snyk) for lead in others)
+    assert not github.works_at(Lead(github="hemang-snyk"), set())  # a personal repo has no staff
+
+
+def test_people_you_said_no_to_never_come_back(tmp_path):
+    from cantrip import engine
+    path = profile.init({"name": "Acme", "pitch": "a thing", "buyer_roles": "cto"}, tmp_path / "p.toml",
+                        interactive=False)
+    path.write_text(path.read_text() + '\n[templates]\nhot = "Hi {first_name}"\n')
+    assert profile.say_no("https://github.com/Ada/", path) == ["https://github.com/Ada/"]
+    assert profile.say_no("bob@example.com", path) == ["https://github.com/Ada/", "bob@example.com"]
+    assert profile.say_no("BOB@example.com", path) == ["https://github.com/Ada/", "bob@example.com"]
+    mine = profile.load(path)
+    assert mine["templates"]["hot"] == "Hi {first_name}"  # hand edits survive
+    profile.update({"name": "Acme", "pitch": "a better thing", "buyer_roles": "cto"}, path)
+    config = profile.apply(spell.load("github-to-leads"), profile.load(path))
+    assert config["skip_people"] == ["https://github.com/Ada/", "bob@example.com"]  # editing the profile keeps them
+    people = [Lead(github="ada"), Lead(github="b", email="Bob@Example.com"), Lead(github="cy", name="Cy")]
+    assert [lead.github for lead in engine.run(config, people)] == ["cy"]
