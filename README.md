@@ -59,8 +59,9 @@ Each row of `leads.csv` has the person, a score from 0 to 100, a tier (hot, warm
 | Spell | Signal in | Out |
 | --- | --- | --- |
 | [attendees-to-leads](spellbook/attendees-to-leads/) | an event guest list: name, email, company, job title, LinkedIn | attendees sorted by seniority, role and fit, with follow-up drafts |
-| [github-to-leads](spellbook/github-to-leads/) | a GitHub user search, a list of logins, a repo's contributors or stargazers | developers scored on their public profile, with first-note drafts |
+| [github-to-leads](spellbook/github-to-leads/) | a GitHub user search, a list of logins, a repo's contributors, stargazers or forks | developers scored on their public profile, with first-note drafts |
 | [contributors-to-leads](spellbook/contributors-to-leads/) | a GitHub repo: yours, a competitor's, or one your buyers build on | its contributors ranked by commits and fit, with drafts about their work |
+| [forks-to-leads](spellbook/forks-to-leads/) | a GitHub repo: yours, a competitor's, or one your buyers build on | the people who forked it, ranking up those who pushed to their fork, with drafts |
 | [web-to-leads](spellbook/web-to-leads/) | the open web, searched by an AI model from your profile | named people and companies, each with its source page and a quote, and AI-written drafts |
 
 Add `--research` to any spell to look up the best leads on the web and write their drafts around what turns up.

@@ -1,10 +1,14 @@
 """Find people by their GitHub profile.
 
-Four ways in, all through GitHub's public API:
+Five ways in, all through GitHub's public API:
 - `search`: GitHub's user search ("language:python location:seattle agents")
 - `users`: a list of logins or profile URLs you already have
-- `contributors`: people who committed to a repo, leaving out bots, AI coding agents and the repo owner's own staff
+- `contributors`: people who committed to a repo
 - `stargazers`: people who starred a repo (GitHub requires GITHUB_TOKEN for this)
+- `forks`: people who forked a repo, and whether they pushed to their fork since
+
+The three repo sources leave out the same accounts (`from_repo`): bots, AI coding agents and the repo owner's
+own staff.
 
 Each person is filled in from their public profile. Set GITHUB_TOKEN for
 5,000 requests an hour; without it GitHub allows 60, enough for a quick try.
@@ -15,10 +19,12 @@ from __future__ import annotations
 import json
 import os
 import re
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Iterable, Iterator
+from datetime import datetime, timedelta
 
 from cantrip.lead import Lead
 
@@ -127,27 +133,63 @@ def _owner_company(repo: str) -> set[str]:
     return set().union(*(_company_keys(owner.get(k) or "") for k in ("login", "name", "blog")))
 
 
-def contributors(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:
-    """Most commits first, as GitHub lists them, each with their commit count. Skipped, and not counted toward
-    `limit`: bots, AI coding agents, and (once their profile is read) people who work at the company that owns
-    the repo, who are its team rather than leads."""
+def is_person(account: dict) -> bool:
+    """A GitHub account that is a person: not a bot, an organization, or an AI coding agent."""
+    return account.get("type") == "User" and account.get("login", "").lower() not in AI_AGENTS
+
+
+def from_repo(repo: str, people: Iterable[tuple[dict, Lead]], limit: int, do_enrich: bool) -> Iterator[Lead]:
+    """Leads from the accounts around a repo (its contributors, stargazers or forks), as (GitHub account, lead)
+    pairs in GitHub's order. Skipped, and not counted toward `limit`: bots, organizations, AI coding agents, accounts
+    deleted since, and (once their profile is read) people who work at the company that owns the repo, who are its
+    team, not leads."""
     team = _owner_company(repo) if do_enrich else set()
-    people = (p for p in _paged(f"{API}/repos/{repo}/contributors", 10_000)
-              if p.get("type") == "User" and p["login"].lower() not in AI_AGENTS)
     found = 0
-    for person in people:
+    for account, lead in people:
         if found >= limit:
             return
-        lead = Lead(github=person["login"], source=f"github-contributors:{repo}", signal="contributed",
-                    contributions=person.get("contributions") or 0)
+        if not is_person(account):
+            continue
         if do_enrich:
-            enrich(lead)
+            try:
+                enrich(lead)
+            except urllib.error.HTTPError as err:
+                if err.code == 404:  # the account is gone, though GitHub still lists its fork or commits
+                    continue
+                raise
             if works_at(lead, team):
                 continue
         found += 1
         yield lead
 
 
+def contributors(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:
+    """Most commits first, as GitHub lists them, each with their commit count."""
+    people = ((p, Lead(github=p["login"], source=f"github-contributors:{repo}", signal="contributed",
+                       contributions=p.get("contributions") or 0))
+              for p in _paged(f"{API}/repos/{repo}/contributors", 10_000))
+    yield from from_repo(repo, people, limit, do_enrich)
+
+
 def stargazers(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:
-    people = _paged(f"{API}/repos/{repo}/stargazers", limit)
-    yield from _people((u["login"] for u in people), f"github-stars:{repo}", "starred", do_enrich)
+    people = ((u, Lead(github=u["login"], source=f"github-stars:{repo}", signal="starred"))
+              for u in _paged(f"{API}/repos/{repo}/stargazers", 10_000))
+    yield from from_repo(repo, people, limit, do_enrich)
+
+
+def _pushed_since_forking(fork: dict) -> str:
+    """The day someone last pushed to their fork, or "" if they never did. A new fork starts with its parent's
+    last push time, and GitHub may touch it in the first minutes, so only a push 10 minutes on counts."""
+    try:
+        made, pushed = (datetime.fromisoformat(fork.get(k) or "") for k in ("created_at", "pushed_at"))
+    except ValueError:
+        return ""
+    return pushed.date().isoformat() if pushed > made + timedelta(minutes=10) else ""
+
+
+def forks(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:
+    """Newest forks first, each with the day its owner last pushed to it, if they did."""
+    people = ((f["owner"], Lead(github=f["owner"]["login"], source=f"github-forks:{repo}", signal="forked",
+                                fork_pushed=_pushed_since_forking(f)))
+              for f in _paged(f"{API}/repos/{repo}/forks?sort=newest", 10_000))
+    yield from from_repo(repo, people, limit, do_enrich)

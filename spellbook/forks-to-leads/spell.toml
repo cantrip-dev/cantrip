@@ -1,0 +1,69 @@
+# forks-to-leads: the people who forked a repo (yours, a competitor's, or a
+# project your buyers build on), newest first, scored against your ICP, with
+# extra points for those who pushed to their fork since: they're building on it.
+#
+# What you sell and who you sell to come from your profile (cantrip.toml,
+# made by `cantrip init`). This file only holds how the spell scores and writes.
+
+about = "Turn a repo's forks into leads, newest first, ranking up the people who build on their copy, with drafts."
+source = "forks"  # the app opens this spell on a repo box
+
+[icp]
+influencer_followers = 500  # followers that count as influence
+
+# Seniority ladder, read from job titles and bios. The highest matching level counts.
+# Your profile's `seniority` setting scales these points (high, normal, low, ignore).
+[[icp.seniority]]
+points = 30
+words = ["founder", "co-founder", "cofounder", "ceo", "cto", "cmo", "chief", "owner", "president"]
+[[icp.seniority]]
+points = 25
+words = ["vp", "vice president", "head of", "director", "general manager", "gm"]
+[[icp.seniority]]
+points = 15
+words = ["lead", "principal", "staff", "manager", "maintainer"]
+[[icp.seniority]]
+points = 5
+words = ["senior", "sr"]
+
+[icp.weights]
+forked = 10              # forked the repo you read
+fork_pushed = 15         # on top: pushed to their fork after forking it
+has_company = 10
+target_company = 35
+keyword = 15
+language = 10            # one of their most-used languages is in your list
+influence = 10           # at least influencer_followers followers
+work_email = 10
+reachable = 5            # public email, website or blog on the profile
+deprioritize = -20
+
+[icp.tiers]
+hot = 60
+warm = 30
+
+# Templates per tier. Fields: {first_name} {company} {title} {event} {signal} {reason}
+# {product} {pitch} {product_line} ("product, pitch") {ask} {sender}. Here {signal} reads
+# like "forked owner/repo and pushed to your copy since". Override any of them in your profile under [templates].
+[templates]
+hot = """
+Hi {first_name},
+
+I saw you've {signal}. I'm working on {product_line}, and someone building on that code is exactly whose take I'd value.
+
+Would you be open to {ask}?
+
+{sender}
+"""
+warm = """
+Hi {first_name},
+
+I saw you've {signal}, and wanted to share {product_line}. I'd love to hear whether it's useful for what you're building.
+
+{sender}
+"""
+default = """
+Hi {first_name}, thanks for your interest in open source. I wanted to share {product_line}; if it sounds useful, I'd love your feedback.
+
+{sender}
+"""

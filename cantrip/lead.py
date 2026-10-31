@@ -24,7 +24,7 @@ class Lead:
     website: str = ""
     # Where they came from
     source: str = ""  # e.g. "github-search:language:python", "csv:open-source-ai-day"
-    signal: str = ""  # the action itself: "registered", "attended", "contributed", "starred", "found", "mentioned"
+    signal: str = ""  # the action itself: "registered", "attended", "contributed", "starred", "forked", "found", "mentioned"
     source_url: str = ""  # the page a web lead was found on
     evidence: str = ""  # what that page says about them, in its own words
     why_now: str = ""  # a quote showing why now is a good time to reach them (raised, hiring, launched...)
@@ -35,6 +35,7 @@ class Lead:
     public_repos: int = 0
     top_languages: list[str] = field(default_factory=list)
     contributions: int = 0  # commits to the repo they came from, for a repo's contributors
+    fork_pushed: str = ""  # the day they last pushed to their fork, for a repo's forks ("" if never)
     # Filled in by the cantrip
     score: int = 0
     tier: str = ""

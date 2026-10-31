@@ -50,6 +50,7 @@ def test_page_and_state(ui):
     assert state["profile"] is None
     assert {"attendees-to-leads", "github-to-leads"} <= {s["name"] for s in state["spells"]}
     assert {s["name"]: s["source"] for s in state["spells"]}["contributors-to-leads"] == "contributors"
+    assert {s["name"]: s["source"] for s in state["spells"]}["forks-to-leads"] == "forks"
 
 
 def test_profile_then_run(ui):

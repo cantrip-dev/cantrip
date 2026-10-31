@@ -1,3 +1,4 @@
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,7 @@ DEVTOOL = profile.apply(spell.load("github-to-leads"), profile.load(PROFILES / "
 
 
 @pytest.mark.parametrize("name", ["devtool-startup", "event-sponsorships", "b2b-saas"])
-@pytest.mark.parametrize("spell_name", ["attendees-to-leads", "github-to-leads", "contributors-to-leads"])
+@pytest.mark.parametrize("spell_name", ["attendees-to-leads", "github-to-leads", "contributors-to-leads", "forks-to-leads"])
 def test_every_example_profile_works_with_every_spell(name, spell_name):
     config = profile.apply(spell.load(spell_name), profile.load(PROFILES / f"{name}.toml"))
     leads = [draft(score(lead, config["icp"]), config) for lead in csv_file.people(GUESTS)]
@@ -220,3 +221,64 @@ def test_people_you_said_no_to_never_come_back(tmp_path):
     assert config["skip_people"] == ["https://github.com/Ada/", "bob@example.com"]  # editing the profile keeps them
     people = [Lead(github="ada"), Lead(github="b", email="Bob@Example.com"), Lead(github="cy", name="Cy")]
     assert [lead.github for lead in engine.run(config, people)] == ["cy"]
+
+
+def _repo_page(source, accounts):
+    """GitHub's page for a repo's contributors, stargazers or forks, made of `accounts` (dicts like /users answers)."""
+    if source == "forks":
+        return [{"owner": a, "created_at": "2026-01-01T00:00:00Z", "pushed_at": "2025-12-01T00:00:00Z"} for a in accounts]
+    return [{**a, "contributions": 3} for a in accounts]
+
+
+@pytest.mark.parametrize("source", ["contributors", "stargazers", "forks"])
+def test_every_repo_source_leaves_out_the_same_accounts(monkeypatch, source):
+    accounts = [{"login": "dependabot[bot]", "type": "Bot"}, {"login": "acme-corp", "type": "Organization"},
+                {"login": "cursoragent", "type": "User"}, {"login": "staff", "type": "User"},
+                {"login": "guest", "type": "User"}, {"login": "other", "type": "User"}]
+    render = {"login": "render-oss", "type": "Organization", "name": "Render OSS", "blog": "https://render.com"}
+
+    def get(url):
+        if "/repos/" not in url:
+            return render
+        return _repo_page(source, accounts) if url.endswith("&page=1") else []
+
+    def enrich(lead):
+        if lead.github == "gone":
+            raise urllib.error.HTTPError(lead.github, 404, "Not Found", {}, None)
+        lead.company = "@renderinc" if lead.github == "staff" else "Acme"
+        return lead
+
+    accounts.insert(4, {"login": "gone", "type": "User"})
+    monkeypatch.setattr(github, "_get", get)
+    monkeypatch.setattr(github, "enrich", enrich)
+    read = getattr(github, source)
+    assert [lead.github for lead in read("render-oss/mcp")] == ["guest", "other"]
+    assert [lead.github for lead in read("render-oss/mcp", limit=1)] == ["guest"]  # skipped ones don't count
+    assert [lead.github for lead in read("render-oss/mcp", do_enrich=False)] == ["staff", "gone", "guest", "other"]
+
+
+def test_forks_note_who_pushed_to_their_fork_since():
+    def fork(made, pushed):
+        return {"created_at": made, "pushed_at": pushed}
+    assert github._pushed_since_forking(fork("2026-10-05T18:38:26Z", "2025-04-29T19:09:51Z")) == ""  # the parent's push
+    assert github._pushed_since_forking(fork("2026-10-22T04:22:06Z", "2026-10-22T04:22:15Z")) == ""  # GitHub, at forking
+    assert github._pushed_since_forking(fork("2026-04-10T12:19:52Z", "2026-10-31T00:44:53Z")) == "2026-10-31"
+    assert github._pushed_since_forking({"created_at": None}) == ""
+
+
+def test_forks_that_were_built_on_rank_higher_with_a_draft_about_the_fork():
+    forks = profile.apply(spell.load("forks-to-leads"), profile.load(PROFILES / "devtool-startup.toml"))
+    built = Lead(github="ada", name="Ada Lovelace", bio="Building RAG search", top_languages=["Python"],
+                 signal="forked", source="github-forks:a/b", fork_pushed="2026-10-31")
+    saved = Lead(**{**vars(built), "github": "bob", "name": "Bob", "fork_pushed": ""})
+    built, saved = (draft(score(lead, forks["icp"]), forks) for lead in (built, saved))
+    assert built.score - saved.score == forks["icp"]["weights"]["fork_pushed"]
+    assert "pushed to their fork (2026-10-31)" in built.reasons and "forked the repo" in saved.reasons
+    assert "forked a/b and pushed to your copy since" in built.draft and "Acme Vector" in built.draft
+    assert "forked a/b." in saved.draft or "forked a/b," in saved.draft
+
+
+def test_forks_spell_asks_for_the_repo(tmp_path, capsys):
+    assert main(["cast", "forks-to-leads", "--profile", str(PROFILES / "devtool-startup.toml"),
+                 "--out", str(tmp_path / "leads.csv")]) == 2
+    assert "--forks owner/repo" in capsys.readouterr().err

@@ -148,6 +148,7 @@
         <button type="button" data-src="users">A list of people</button>
         <button type="button" data-src="contributors">A repo's contributors</button>
         <button type="button" data-src="stars">A repo's stargazers</button>
+        <button type="button" data-src="forks">A repo's forks</button>
       </div>
       <div class="grid">
         <div class="wide" id="gh-input-wrap"></div>
@@ -252,6 +253,7 @@ const GH = {
   users: {label: "GitHub logins or profile links", hint: "one per line", area: true},
   contributors: {label: "Repo", hint: "owner/name, e.g. langchain-ai/langgraph", area: false},
   stars: {label: "Repo", hint: "owner/name. GitHub needs a token for stargazers", area: false},
+  forks: {label: "Repo", hint: "owner/name, newest forks first", area: false},
 };
 let state = {}, csvText = "", csvName = "", ghSource = "search", leads = [], tierFilter = "all";
 
