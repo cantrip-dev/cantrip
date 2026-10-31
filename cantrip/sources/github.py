@@ -24,11 +24,14 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Iterable, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from itertools import islice
 
 from cantrip.lead import Lead
 
 API = "https://api.github.com"
+READERS = 8  # profiles read at once: a run of 30 people takes seconds, not a minute
 
 
 def _get(url: str) -> object:
@@ -138,29 +141,34 @@ def is_person(account: dict) -> bool:
     return account.get("type") == "User" and account.get("login", "").lower() not in AI_AGENTS
 
 
+def _read(lead: Lead) -> Lead | None:
+    """`enrich`, or None when the account is gone, though GitHub still lists its fork or commits."""
+    try:
+        return enrich(lead)
+    except urllib.error.HTTPError as err:
+        if err.code == 404:
+            return None
+        raise
+
+
 def from_repo(repo: str, people: Iterable[tuple[dict, Lead]], limit: int, do_enrich: bool) -> Iterator[Lead]:
     """Leads from the accounts around a repo (its contributors, stargazers or forks), as (GitHub account, lead)
     pairs in GitHub's order. Skipped, and not counted toward `limit`: bots, organizations, AI coding agents, accounts
     deleted since, and (once their profile is read) people who work at the company that owns the repo, who are its
-    team, not leads."""
+    team, not leads. Profiles are read READERS at a time, only as many as `limit` still needs."""
     team = _owner_company(repo) if do_enrich else set()
+    leads = (lead for account, lead in people if is_person(account))
     found = 0
-    for account, lead in people:
-        if found >= limit:
-            return
-        if not is_person(account):
-            continue
-        if do_enrich:
-            try:
-                enrich(lead)
-            except urllib.error.HTTPError as err:
-                if err.code == 404:  # the account is gone, though GitHub still lists its fork or commits
+    with ThreadPoolExecutor(READERS) as pool:
+        while found < limit:
+            batch = list(islice(leads, limit - found))
+            if not batch:
+                return
+            for lead in pool.map(_read, batch) if do_enrich else batch:
+                if lead is None or works_at(lead, team):
                     continue
-                raise
-            if works_at(lead, team):
-                continue
-        found += 1
-        yield lead
+                found += 1
+                yield lead
 
 
 def contributors(repo: str, limit: int = 100, do_enrich: bool = True) -> Iterator[Lead]:
