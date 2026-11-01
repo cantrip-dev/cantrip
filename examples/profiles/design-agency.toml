@@ -1,0 +1,17 @@
+# Example: a product design and development agency selling project work.
+
+[product]
+name = "Acme Studio"
+pitch = "a small product design and build studio for growing software teams"
+ask = "a 20-minute call to scope a project"
+sender = "Riley"
+
+[icp]
+seniority = "normal"
+buyer_roles = ["head of product", "vp product", "head of engineering", "vp engineering", "founder", "cto", "director of product"]
+champion_roles = ["product manager", "designer", "engineer", "engineering manager"]
+target_companies = []
+keywords = ["product design", "ux", "ui", "design system", "prototype", "mvp", "agency", "app"]
+languages = ["English"]
+deprioritize = ["student", "intern", "recruiter"]
+exclude = ["acme.example"]
