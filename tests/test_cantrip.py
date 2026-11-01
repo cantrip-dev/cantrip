@@ -282,3 +282,22 @@ def test_forks_spell_asks_for_the_repo(tmp_path, capsys):
     assert main(["cast", "forks-to-leads", "--profile", str(PROFILES / "devtool-startup.toml"),
                  "--out", str(tmp_path / "leads.csv")]) == 2
     assert "--forks owner/repo" in capsys.readouterr().err
+
+
+def test_repo_sources_read_profiles_at_once_and_only_as_many_as_needed(monkeypatch):
+    import time
+    page = [{"login": f"p{i}", "type": "User", "contributions": 1} for i in range(16)]
+    monkeypatch.setattr(github, "_get", lambda url: page if url.endswith("&page=1") else
+                        [] if "/contributors" in url else {"type": "User"})
+    read = []
+
+    def enrich(lead):
+        time.sleep(0.2)
+        read.append(lead.github)
+        return lead
+
+    monkeypatch.setattr(github, "enrich", enrich)
+    start = time.monotonic()
+    assert [lead.github for lead in github.contributors("a/b", limit=8)] == [f"p{i}" for i in range(8)]
+    assert time.monotonic() - start < 0.2 * 8 / 2  # one after another would take 1.6 s
+    assert sorted(read) == sorted(f"p{i}" for i in range(8))  # nobody past the limit
